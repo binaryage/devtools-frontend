@@ -23,6 +23,8 @@ config.gypi
 npm-debug.log
 /scripts/protocol_typescript/*.js
 
+/.idea/
+
 /build
 /buildtools
 /out
