@@ -69,7 +69,6 @@ export function getReadyPromise() {
 
 export function markAsReady() {
   if (_runtimeReadyPromiseCallback) {
-    console.log('markAsReady!');
     _runtimeReadyPromiseCallback();
     _runtimeReadyPromiseCallback = null;
   } else {
