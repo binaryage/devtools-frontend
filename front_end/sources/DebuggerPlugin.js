@@ -1134,29 +1134,13 @@ export class DebuggerPlugin extends Plugin {
       return;
     }
 
-    /**
-     * @param {string} name
-     * @param {number|string=} line
-     * @param {number|string=} column
-     * @return {string}
-     */
-    function getLocationId(name, line, column) {
-      line = line || '?';
-      column = column || '?';
-      return `${name}@${line}:${column}`;
-    }
-
-    const infoMap = new Map();
+    const valuesMap = new Map();
     for (const property of properties) {
-      const locationId = getLocationId(property.name, property.originalNameLineNumber, property.originalNameColumnNumber);
-      infoMap.set(locationId, {
-        name: property.name,
-        value: property.value
-      });
+      valuesMap.set(property.name, property.value);
     }
 
     /** @type {!Map.<number, !Set<string>>} */
-    const infoIdsPerLine = new Map();
+    const namesPerLine = new Map();
     let skipObjectProperty = false;
     const tokenizer = new TextEditor.CodeMirrorUtils.TokenizerFactory().createTokenizer('text/javascript');
     tokenizer(this._textEditor.line(fromLine).substring(fromColumn), processToken.bind(this, fromLine));
@@ -1173,41 +1157,31 @@ export class DebuggerPlugin extends Plugin {
      * @this {DebuggerPlugin}
      */
     function processToken(editorLineNumber, tokenValue, tokenType, column, newColumn) {
-      if (!skipObjectProperty && tokenType && this._isIdentifier(tokenType)) {
-        let exists = true;
-        let tokenLocationId = getLocationId(tokenValue, editorLineNumber, column);
-        if (!infoMap.has(tokenLocationId)) {
-          tokenLocationId = getLocationId(tokenValue); // a case without source-maps
-          if (!infoMap.has(tokenLocationId)) {
-            exists = false;
-          }
+      if (!skipObjectProperty && tokenType && this._isIdentifier(tokenType) && valuesMap.get(tokenValue)) {
+        let names = namesPerLine.get(editorLineNumber);
+        if (!names) {
+          names = new Set();
+          namesPerLine.set(editorLineNumber, names);
         }
-        if (exists) {
-          let ids = infoIdsPerLine.get(editorLineNumber);
-          if (!ids) {
-            ids = new Set();
-            infoIdsPerLine.set(editorLineNumber, ids);
-          }
-          ids.add(tokenLocationId);
-        }
+        names.add(tokenValue);
       }
       skipObjectProperty = tokenValue === '.';
     }
-    this._textEditor.operation(this._renderDecorations.bind(this, infoMap, infoIdsPerLine, fromLine, toLine));
+    this._textEditor.operation(this._renderDecorations.bind(this, valuesMap, namesPerLine, fromLine, toLine));
   }
 
   /**
-   * @param {!Map.<string,!{name:string, value: !SDK.RemoteObject.RemoteObject}>} infoMap
-   * @param {!Map.<number, !Set<string>>} infoIdsPerLine
+   * @param {!Map.<string,!SDK.RemoteObject.RemoteObject>} valuesMap
+   * @param {!Map.<number, !Set<string>>} namesPerLine
    * @param {number} fromLine
    * @param {number} toLine
    */
-  _renderDecorations(infoMap, infoIdsPerLine, fromLine, toLine) {
+  _renderDecorations(valuesMap, namesPerLine, fromLine, toLine) {
     const formatter = new ObjectUI.RemoteObjectPreviewFormatter.RemoteObjectPreviewFormatter();
     for (let i = fromLine; i < toLine; ++i) {
-      const infoIds = infoIdsPerLine.get(i);
+      const names = namesPerLine.get(i);
       const oldWidget = this._valueWidgets.get(i);
-      if (!infoIds) {
+      if (!names) {
         if (oldWidget) {
           this._valueWidgets.delete(i);
           this._textEditor.removeDecoration(oldWidget, i);
@@ -1231,21 +1205,21 @@ export class DebuggerPlugin extends Plugin {
       widget.__nameToToken = new Map();
 
       let renderedNameCount = 0;
-      for (const infoId of infoIds) {
+      for (const name of names) {
         if (renderedNameCount > 10) {
           break;
         }
-        if (infoIdsPerLine.get(i - 1) && infoIdsPerLine.get(i - 1).has(infoId)) {
-          continue;  // Only render name once in the given continuous block.
-        }
+        const names = namesPerLine.get(i - 1);
+        if (names && names.has(name)) {
+          continue;
+        }  // Only render name once in the given continuous block.
         if (renderedNameCount) {
           UI.UIUtils.createTextChild(widget, ', ');
         }
         const nameValuePair = /** @type {!HTMLElement} */ (widget.createChild('span'));
-        widget.__nameToToken.set(infoId, nameValuePair);
-        const info = infoMap.get(infoId);
-        UI.UIUtils.createTextChild(nameValuePair, info.name + ' = ');
-        const value = info.value;
+        widget.__nameToToken.set(name, nameValuePair);
+        UI.UIUtils.createTextChild(nameValuePair, name + ' = ');
+        const value = valuesMap.get(name);
         if (!value) {
           throw new Error('value is expected to be null');
         }
@@ -1258,7 +1232,7 @@ export class DebuggerPlugin extends Plugin {
           formatter.appendObjectPreview(nameValuePair, value.preview, false /* isEntry */);
         } else {
           const propertyValue = ObjectUI.ObjectPropertiesSection.ObjectPropertiesSection.createPropertyValue(
-            value, /* wasThrown */ false, /* showPreview */ false);
+              value, /* wasThrown */ false, /* showPreview */ false);
           nameValuePair.appendChild(propertyValue.element);
         }
         ++renderedNameCount;
@@ -1276,7 +1250,7 @@ export class DebuggerPlugin extends Plugin {
             widgetChanged = true;
             // value has changed, update it.
             UI.UIUtils.runCSSAnimationOnce(
-              /** @type {!Element} */ (widget.__nameToToken.get(name)), 'source-frame-value-update-highlight');
+                /** @type {!Element} */ (widget.__nameToToken.get(name)), 'source-frame-value-update-highlight');
           }
         }
         if (widgetChanged) {

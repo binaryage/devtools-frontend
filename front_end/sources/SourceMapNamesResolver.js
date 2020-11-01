@@ -30,34 +30,6 @@ export class Identifier {
   }
 }
 
-export class NameDescriptor {
-  /**
-   * @param {string} name
-   * @param {number|undefined} lineNumber
-   * @param {number|undefined} columnNumber
-   */
-  constructor(name, lineNumber, columnNumber) {
-    this.name = name;
-    this.lineNumber = lineNumber;
-    this.columnNumber = columnNumber;
-  }
-}
-
-
-export class MappingRecord {
-  /**
-   * @param {!NameDescriptor} compiledNameDescriptor
-   * @param {!NameDescriptor} originalNameDescriptor
-   */
-  constructor(compiledNameDescriptor, originalNameDescriptor) {
-    this.compiledNameDescriptor = compiledNameDescriptor;
-    this.originalNameDescriptor = originalNameDescriptor;
-  }
-}
-
-export class Mapping extends Array {
-}
-
 /**
  * @param {!SDK.DebuggerModel.ScopeChainEntry} scope
  * @return {!Promise<!Array<!Identifier>>}
@@ -119,7 +91,7 @@ export const scopeIdentifiers = function(scope) {
 
 /**
  * @param {!SDK.DebuggerModel.ScopeChainEntry} scope
- * @return {!Promise<!Mapping>}
+ * @return {!Promise.<!Map<string, string>>}
  */
 export const resolveScope = function(scope) {
   let identifiersPromise = scopeToCachedIdentifiersMap.get(scope);
@@ -130,7 +102,7 @@ export const resolveScope = function(scope) {
   const script = scope.callFrame().script;
   const sourceMap = Bindings.DebuggerWorkspaceBinding.DebuggerWorkspaceBinding.instance().sourceMapForScript(script);
   if (!sourceMap) {
-    return Promise.resolve(/** @type {!Mapping} */([]));
+    return Promise.resolve(new Map());
   }
 
   /** @type {!Map<string, !TextUtils.Text.Text>} */
@@ -141,11 +113,10 @@ export const resolveScope = function(scope) {
 
   /**
    * @param {!Array<!Identifier>} identifiers
-   * @return {!Promise<!Mapping>}
+   * @return {!Promise<!Map<string, string>>}
    */
   function onIdentifiers(identifiers) {
-    const namesMapping = /** @type {!Mapping} */([]);
-    const missingIdentifiers = [];
+    const namesMapping = new Map();
     // Extract as much as possible from SourceMap.
     for (let i = 0; i < identifiers.length; ++i) {
       const id = identifiers[i];
@@ -154,39 +125,38 @@ export const resolveScope = function(scope) {
       }
       const entry = sourceMap.findEntry(id.lineNumber, id.columnNumber);
       if (entry && entry.name) {
-        const compiled = new NameDescriptor(id.name, id.lineNumber, id.columnNumber);
-        const original = new NameDescriptor(entry.name, entry.sourceLineNumber, entry.sourceColumnNumber);
-        namesMapping.push(new MappingRecord(compiled, original));
-      } else {
-        missingIdentifiers.push(id);
+        namesMapping.set(id.name, entry.name);
       }
     }
 
     // Resolve missing identifier names from sourcemap ranges.
-    const promises = missingIdentifiers.map(id => {
-      return resolveSourceName(id).then(
-        (originalNameDescriptor) => onSourceNameResolved(namesMapping, id, originalNameDescriptor))
-    });
-    return Promise.all(promises)
-        .then(() => namesMapping);
+    const promises = [];
+    for (let i = 0; i < identifiers.length; ++i) {
+      const id = identifiers[i];
+      if (namesMapping.has(id.name)) {
+        continue;
+      }
+      const promise = resolveSourceName(id).then(onSourceNameResolved.bind(null, namesMapping, id));
+      promises.push(promise);
+    }
+    return Promise.all(promises).then(getScopeResolvedForTest()).then(() => namesMapping);
   }
 
   /**
-   * @param {!Mapping} namesMapping
+   * @param {!Map<string, string>} namesMapping
    * @param {!Identifier} id
-   * @param {?NameDescriptor} originalNameDescriptor
+   * @param {?string} sourceName
    */
-  function onSourceNameResolved(namesMapping, id, originalNameDescriptor) {
-    if (!originalNameDescriptor) {
+  function onSourceNameResolved(namesMapping, id, sourceName) {
+    if (!sourceName) {
       return;
     }
-    const compiled = new NameDescriptor(id.name, id.lineNumber, id.columnNumber);
-    namesMapping.push(new MappingRecord(compiled, originalNameDescriptor));
+    namesMapping.set(id.name, sourceName);
   }
 
   /**
    * @param {!Identifier} id
-   * @return {!Promise<?NameDescriptor>}
+   * @return {!Promise<?string>}
    */
   function resolveSourceName(id) {
     const startEntry = sourceMap ? sourceMap.findEntry(id.lineNumber, id.columnNumber) : null;
@@ -194,7 +164,7 @@ export const resolveScope = function(scope) {
     if (!startEntry || !endEntry || !startEntry.sourceURL || startEntry.sourceURL !== endEntry.sourceURL ||
         !startEntry.sourceLineNumber || !startEntry.sourceColumnNumber || !endEntry.sourceLineNumber ||
         !endEntry.sourceColumnNumber) {
-      return Promise.resolve(null);
+      return Promise.resolve(/** @type {?string} */ (null));
     }
     const sourceTextRange = new TextUtils.TextRange.TextRange(
         startEntry.sourceLineNumber, startEntry.sourceColumnNumber, endEntry.sourceLineNumber,
@@ -203,23 +173,21 @@ export const resolveScope = function(scope) {
         Bindings.DebuggerWorkspaceBinding.DebuggerWorkspaceBinding.instance().uiSourceCodeForSourceMapSourceURL(
             script.debuggerModel, startEntry.sourceURL, script.isContentScript());
     if (!uiSourceCode) {
-      return Promise.resolve(null);
+      return Promise.resolve(/** @type {?string} */ (null));
     }
 
     return uiSourceCode.requestContent().then(deferredContent => {
       const content = deferredContent.content;
-      return onSourceContent(sourceTextRange, startEntry.sourceLineNumber || 1, startEntry.sourceColumnNumber || 1, content);
+      return onSourceContent(sourceTextRange, content);
     });
   }
 
   /**
    * @param {!TextUtils.TextRange.TextRange} sourceTextRange
-   * @param {number} line
-   * @param {number} column
    * @param {?string} content
-   * @return {?NameDescriptor}
+   * @return {?string}
    */
-  function onSourceContent(sourceTextRange, line, column, content) {
+  function onSourceContent(sourceTextRange, content) {
     if (!content) {
       return null;
     }
@@ -229,16 +197,13 @@ export const resolveScope = function(scope) {
       textCache.set(content, text);
     }
     const originalIdentifier = text.extract(sourceTextRange).trim();
-    if (!/[a-zA-Z0-9_$]+/.test(originalIdentifier)) {
-      return null;
-    }
-    return new NameDescriptor(originalIdentifier, line, column);
+    return /[a-zA-Z0-9_$]+/.test(originalIdentifier) ? originalIdentifier : null;
   }
 };
 
 /**
  * @param {!SDK.DebuggerModel.CallFrame} callFrame
- * @return {!Promise<!Mapping>}
+ * @return {!Promise.<!Map<string, string>>}
  */
 export const allVariablesInCallFrame = function(callFrame) {
   const cached = cachedMapBycallFrame.get(callFrame);
@@ -255,56 +220,23 @@ export const allVariablesInCallFrame = function(callFrame) {
   return Promise.all(promises).then(mergeVariables);
 
   /**
-   * @param {!Array<!Mapping>} nameMappings
-   * @return {!Mapping}
+   * @param {!Array<!Map<string, string>>} nameMappings
+   * @return {!Map<string, string>}
    */
   function mergeVariables(nameMappings) {
-    const mapping = /** @type {!Mapping} */(Array.prototype.concat.apply([], nameMappings));
-    callFrame[cachedMapSymbol] = mapping;
-    return mapping;
+    /** @type {!Map<string, string>} */
+    const reverseMapping = new Map();
+    for (const map of nameMappings) {
+      for (const compiledName of map.keys()) {
+        const originalName = map.get(compiledName);
+        if (originalName && !reverseMapping.has(originalName)) {
+          reverseMapping.set(originalName, compiledName);
+        }
+      }
+    }
+    cachedMapBycallFrame.set(callFrame, reverseMapping);
+    return reverseMapping;
   }
-};
-
-/**
- * @param {!Mapping} mapping
- * @param {string} name
- * @param {number} line
- * @param {number} column
- * @return {?MappingRecord}
- */
-const lookupMappingRecordForOriginalName = function(mapping, name, line, column) {
-  const res = mapping.filter(value => {
-    const desc = value.originalNameDescriptor;
-    return desc.name === name && desc.lineNumber === line && desc.columnNumber === column;
-  });
-  if (res.length !== 1) {
-    return null;
-  }
-  return res[0];
-};
-
-/**
- * @param {!Mapping} mapping
- * @param {string} name
- * @return {!Array<!MappingRecord>}
- */
-const collectMappingRecordsForOriginalName = function(mapping, name) {
-  return mapping.filter(value => {
-    const desc = value.originalNameDescriptor;
-    return desc.name === name;
-  });
-};
-
-/**
- * @param {!Mapping} mapping
- * @param {string} name
- * @return {!Array<!MappingRecord>}
- */
-const collectMappingRecordsForCompiledName = function(mapping, name) {
-  return mapping.filter(value => {
-    const desc = value.compiledNameDescriptor;
-    return desc.name === name;
-  });
 };
 
 /**
@@ -333,14 +265,12 @@ export const resolveExpression = function(
 
   /**
    * @param {!SDK.DebuggerModel.DebuggerModel} debuggerModel
-   * @param {!Mapping} mapping
+   * @param {!Map<string, string>} reverseMapping
    * @return {!Promise<string>}
    */
-  function findCompiledName(debuggerModel, mapping) {
-    const record = lookupMappingRecordForOriginalName(mapping,
-      originalText, lineNumber, startColumnNumber);
-    if (record) {
-      return Promise.resolve(record.compiledNameDescriptor.name);
+  function findCompiledName(debuggerModel, reverseMapping) {
+    if (reverseMapping.has(originalText)) {
+      return Promise.resolve(reverseMapping.get(originalText) || '');
     }
 
     return resolveExpressionAsync(debuggerModel, uiSourceCode, lineNumber, startColumnNumber, endColumnNumber);
@@ -409,7 +339,7 @@ export const resolveExpressionAsync =
  */
 export const resolveThisObject = function(callFrame) {
   if (!callFrame) {
-    return Promise.resolve(null);
+    return Promise.resolve(/** @type {?SDK.RemoteObject.RemoteObject} */ (null));
   }
   if (!callFrame.scopeChain().length) {
     return Promise.resolve(callFrame.thisObject());
@@ -418,19 +348,23 @@ export const resolveThisObject = function(callFrame) {
   return resolveScope(callFrame.scopeChain()[0]).then(onScopeResolved);
 
   /**
-   * @param {!Mapping} namesMapping
+   * @param {!Map<string, string>} namesMapping
    * @return {!Promise<?SDK.RemoteObject.RemoteObject>}
    */
   function onScopeResolved(namesMapping) {
-    const thisRecords = collectMappingRecordsForOriginalName(namesMapping, 'this');
-    if (thisRecords.size !== 1) {
+    const thisMappings = Platform.MapUtilities.inverse(namesMapping).get('this');
+    if (!callFrame) {
+      return Promise.resolve(null);
+    }
+
+    if (!thisMappings || thisMappings.size !== 1) {
       return Promise.resolve(callFrame.thisObject());
     }
 
-    const compiledName = thisRecords[0].compiledNameDescriptor.name;
+    const thisMapping = thisMappings.values().next().value;
     return callFrame
         .evaluate(/** @type {!SDK.RuntimeModel.EvaluationOptions} */ ({
-          expression: compiledName,
+          expression: thisMapping,
           objectGroup: 'backtrace',
           includeCommandLineAPI: false,
           silent: true,
@@ -578,23 +512,13 @@ export class RemoteObject extends SDK.RemoteObject.RemoteObject {
     if (properties) {
       for (let i = 0; i < properties.length; ++i) {
         const property = properties[i];
-        let name = property.name;
-        const propertyMapping = collectMappingRecordsForCompiledName(namesMapping, name);
-        if (propertyMapping.length > 0) {
-          // TODO: how to resolve the case when compiled name matches multiple original names?
-          //       currently we don't have any information in property which would help us decide which one to take
-          name = propertyMapping[0].originalNameDescriptor.name;
+        const name = namesMapping.get(property.name) || properties[i].name;
+        if (!property.value) {
+          continue;
         }
-        const newProperty = new SDK.RemoteObject.RemoteObjectProperty(
-          name, property.value, property.enumerable, property.writable, property.isOwn, property.wasThrown,
-          property.symbol, property.synthetic);
-        if (propertyMapping.length > 0) {
-          // this is for _prepareScopeVariables, TODO: figure out a better way how to pass this info
-          newProperty.originalNameLineNumber = propertyMapping[0].originalNameDescriptor.lineNumber;
-          newProperty.originalNameColumnNumber = propertyMapping[0].originalNameDescriptor.columnNumber;
-        }
-        newProperties.push(newProperty);
-        newProperties[newProperties.length - 1].resolutionSourceProperty = property;
+        newProperties.push(new SDK.RemoteObject.RemoteObjectProperty(
+            name, property.value, property.enumerable, property.writable, property.isOwn, property.wasThrown,
+            property.symbol, property.synthetic));
       }
     }
     return {properties: newProperties, internalProperties: internalProperties};
@@ -617,10 +541,11 @@ export class RemoteObject extends SDK.RemoteObject.RemoteObject {
     }
 
     let actualName = name;
-    const matchingRecords = collectMappingRecordsForOriginalName(namesMapping, name);
-    if (matchingRecords.length > 0) {
-      // TODO: how to resolve the case when original name matches multiple compiled names?
-      actualName = matchingRecords[0].compiledNameDescriptor.name;
+    for (const compiledName of namesMapping.keys()) {
+      if (namesMapping.get(compiledName) === name) {
+        actualName = compiledName;
+        break;
+      }
     }
     return this._object.setPropertyValue(actualName, value);
   }
