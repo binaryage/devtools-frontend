@@ -1225,6 +1225,7 @@ export class DebuggerPlugin extends Plugin {
         }
         const propertyCount = value.preview ? value.preview.properties.length : 0;
         const entryCount = value.preview && value.preview.entries ? value.preview.entries.length : 0;
+        const diracAngel = Common.getDiracAngel();
         if (diracAngel.toggles.hasInlineCFs && value.customPreview()) {
           const customValueEl = (new ObjectUI.CustomPreviewComponent.CustomPreviewComponent(value)).element;
           nameValuePair.appendChild(customValueEl);
