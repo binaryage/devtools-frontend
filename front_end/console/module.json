@@ -213,7 +213,6 @@
   "dependencies": [
     "components",
     "source_frame",
-    "dirac",
     "data_grid",
     "host",
     "object_ui",

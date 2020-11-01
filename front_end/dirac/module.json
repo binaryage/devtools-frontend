@@ -1,8 +1,6 @@
 {
   "dependencies": [
-    "platform",
-    "common",
-    "host"
+    "common"
   ],
   "modules": [
     "dirac.js",
@@ -11,10 +9,11 @@
     "keysim.js"
   ],
   "scripts": [
-    "require-implant.js"
   ],
   "skip_compilation": [
-    "require-implant.js"
+    "parinfer.js",
+    "parinfer-codemirror.js",
+    "keysim.js"
   ],
   "resources": [
   ]

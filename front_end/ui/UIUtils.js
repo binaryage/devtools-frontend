@@ -1212,8 +1212,9 @@ export function initializeUIUtils(document, themeSetting) {
  * @return {string}
  */
 export function beautifyFunctionName(name) {
-  if (dirac.hasBeautifyFunctionNames) {
-    return dirac.getFunctionName(name);
+  const diracAngel = Common.getDiracAngel();
+  if (diracAngel.toggles.hasBeautifyFunctionNames) {
+    return diracAngel.getFunctionName(name);
   }
   return name || Common.UIString.UIString('(anonymous)');
 }

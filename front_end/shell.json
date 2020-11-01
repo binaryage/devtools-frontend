@@ -22,7 +22,6 @@
     { "name": "ui", "type": "autostart" },
     { "name": "workspace", "type": "autostart" },
 
-    { "name": "dirac_lazy" },
     { "name": "changes" },
     { "name": "client_variations" },
     { "name": "cm_modes" },

@@ -1,7 +1,6 @@
 {
   "dependencies": [
     "common",
-    "dirac",
     "host"
   ],
   "modules": [

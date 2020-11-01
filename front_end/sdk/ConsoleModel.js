@@ -1,4 +1,3 @@
-// @ts-nocheck
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
  *
@@ -205,8 +204,9 @@ export class ConsoleModel extends Common.ObjectWrapper.ObjectWrapper {
 
     if (msg.parameters) {
       const firstParam = msg.parameters[0];
+      // @ts-ignore
       if (firstParam && firstParam.value === '~~$DIRAC-MSG$~~') {
-        this.dispatchEventToListeners(SDK.ConsoleModel.Events.DiracMessage, msg);
+        this.dispatchEventToListeners(Events.DiracMessage, msg);
         return;
       }
     }

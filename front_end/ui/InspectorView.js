@@ -272,7 +272,8 @@ export class InspectorView extends VBox {
    * @param {boolean} focus
    */
   _showDrawer(focus) {
-    dirac.feedback('showDrawer');
+    const diracAngel = Common.getDiracAngel();
+    diracAngel.feedback('showDrawer');
     if (this._drawerTabbedPane.isShowing()) {
       return;
     }
@@ -380,7 +381,8 @@ export class InspectorView extends VBox {
    */
   _tabSelected(event) {
     const tabId = /** @type {string} */ (event.data['tabId']);
-    dirac.notifyPanelSwitch(tabId);
+    const diracAngel = Common.getDiracAngel();
+    diracAngel.notifyPanelSwitch(tabId);
     Host.userMetrics.panelShown(tabId);
   }
 

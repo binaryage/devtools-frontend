@@ -7,14 +7,6 @@ import("./scripts/build/ninja/vars.gni")
 generated_typescript_modules = []
 
 all_typescript_module_sources = [
-  # dirac - start
-#  "dirac/parinfer.js",
-#  "dirac/parinfer-codemirror.js",
-#  "dirac/keysim.js",
-  "third_party/codemirror/package/addon/runmode/runmode.js",
-  "third_party/codemirror/package/addon/display/placeholder.js",
-  "console/ConsoleDiracPrompt.js",
-  # dirac - end
   "accessibility/ARIAAttributesView.js",
   "accessibility/ARIAMetadata.js",
   "accessibility/AXBreadcrumbsPane.js",
@@ -129,6 +121,16 @@ all_typescript_module_sources = [
   "devices/DevicesView.js",
   "diff/DiffWrapper.js",
   "diff/diff_match_patch.js",
+  # dirac - start
+  "dirac/dirac.js",
+  "dirac/DiracAngel.js",
+  "dirac/parinfer.js",
+  "dirac/parinfer-codemirror.js",
+  "dirac/keysim.js",
+  "third_party/codemirror/package/addon/runmode/runmode.js",
+  "third_party/codemirror/package/addon/display/placeholder.js",
+  "console/ConsoleDiracPrompt.js",
+  # dirac - end
   "dom_extension/DOMExtension.js",
   "elements/Adorner.js",
   "elements/CSSAngle.js",

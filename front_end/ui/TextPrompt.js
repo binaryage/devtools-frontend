@@ -52,6 +52,7 @@ export class TextPrompt extends Common.ObjectWrapper.ObjectWrapper {
     this._proxyElementDisplay = 'inline-block';
     this._autocompletionTimeout = DefaultAutocompletionTimeout;
     this._title = '';
+    this._ignoreEnter = false;
     this._queryRange = null;
     this._previousText = '';
     this._currentSuggestion = null;
@@ -365,7 +366,7 @@ export class TextPrompt extends Common.ObjectWrapper.ObjectWrapper {
         }
         break;
     }
-    if (!dirac.ignoreEnter) {
+    if (!this._ignoreEnter) {
       if (isEnterKey(event)) {
         event.preventDefault();
       }
@@ -772,13 +773,6 @@ export class TextPrompt extends Common.ObjectWrapper.ObjectWrapper {
 
     selection.removeAllRanges();
     selection.addRange(selectionRange);
-  }
-
-  /**
-   * @return {string}
-   */
-  getSuggestBoxRepresentation() {
-    return 'getSuggestBoxRepresentation not implemented for UI.TextPrompt';
   }
 
   /**

@@ -1,10 +1,15 @@
-// @ts-nocheck
 // Copyright 2020 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+/* eslint-disable no-console */
+
+// @ts-nocheck
 
 import {ConsoleHistoryManager} from './ConsolePrompt.js';
 import * as UI from '../ui/ui.js';
+import * as TextEditor from '../text_editor/text_editor.js';
+import * as ObjectUI from '../object_ui/object_ui.js';
+import * as Common from '../common/common.js';
 
 /**
  * @unrestricted
@@ -19,11 +24,15 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
 
     this._history = new ConsoleHistoryManager();
     this._codeMirror = codeMirrorInstance;
+    // @ts-ignore
     this._codeMirror.on('changes', this._changes.bind(this));
+    // @ts-ignore
     this._codeMirror.on('scroll', this._onScroll.bind(this));
+    // @ts-ignore
     this._codeMirror.on('cursorActivity', this._onCursorActivity.bind(this));
+    // @ts-ignore
     this._codeMirror.on('blur', this._blur.bind(this));
-    this._currentClojureScriptNamespace = null;
+    this._currentClojureScriptNamespace = 'cljs.user';
     this._lastAutocompleteRequest = 0;
     // just to mimic disabled eager preview functionality of ConsolePrompt
     this._eagerPreviewElement = document.createElement('div');
@@ -49,6 +58,7 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
    * @return {boolean}
    */
   hasFocus() {
+    // @ts-ignore
     return this._codeMirror.hasFocus();
   }
 
@@ -56,12 +66,17 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
    * @override
    */
   focus() {
+    // @ts-ignore
     this._codeMirror.focus();
     // HACK: this is needed to properly display cursor in empty codemirror:
     // http://stackoverflow.com/questions/10575833/codemirror-has-content-but-wont-display-until-keypress
+    // @ts-ignore
     this._codeMirror.refresh();
   }
 
+  /**
+   * @param {string} ns
+   */
   setCurrentClojureScriptNamespace(ns) {
     this._currentClojureScriptNamespace = ns;
   }
@@ -71,6 +86,7 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
    * @return {string}
    */
   text() {
+    // @ts-ignore
     const text = this._codeMirror.getValue();
     return text.replace(/[\s\n]+$/gm, ''); // remove trailing newlines and whitespace
   }
@@ -81,9 +97,12 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
    */
   setText(x) {
     this.clearAutocomplete();
+    // @ts-ignore
     this._codeMirror.setValue(x);
     this.moveCaretToEndOfPrompt();
-    this._element.scrollIntoView();
+    if (this._element) {
+      this._element.scrollIntoView();
+    }
   }
 
   /**
@@ -102,6 +121,7 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
    * @return {boolean}
    */
   isCaretInsidePrompt() {
+    // @ts-ignore
     return this._codeMirror.hasFocus();
   }
 
@@ -110,8 +130,11 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
    * @return {boolean}
    */
   _isCaretAtEndOfPrompt() {
+    // @ts-ignore
     const content = this._codeMirror.getValue();
+    // @ts-ignore
     const cursor = this._codeMirror.getCursor();
+    // @ts-ignore
     const endCursor = this._codeMirror.posFromIndex(content.length);
     return (cursor.line === endCursor.line && cursor.ch === endCursor.ch);
   }
@@ -120,7 +143,9 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
    * @return {boolean}
    */
   isCaretOnFirstLine() {
+    // @ts-ignore
     const cursor = this._codeMirror.getCursor();
+    // @ts-ignore
     return (cursor.line === this._codeMirror.firstLine());
   }
 
@@ -128,7 +153,9 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
    * @return {boolean}
    */
   isCaretOnLastLine() {
+    // @ts-ignore
     const cursor = this._codeMirror.getCursor();
+    // @ts-ignore
     return (cursor.line === this._codeMirror.lastLine());
   }
 
@@ -137,19 +164,24 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
    * @override
    */
   moveCaretToEndOfPrompt() {
+    // @ts-ignore
     this._codeMirror.setCursor(this._codeMirror.lastLine() + 1, 0, null);
   }
 
   /**
    * @override
+   * @param {number} index
    */
   moveCaretToIndex(index) {
+    // @ts-ignore
     const pos = this._codeMirror.posFromIndex(index);
+    // @ts-ignore
     this._codeMirror.setCursor(pos, null, null);
   }
 
   finishAutocomplete() {
-    if (dirac.DEBUG_COMPLETIONS) {
+    const diracAngel = Common.getDiracAngel();
+    if (diracAngel.toggles.DEBUG_COMPLETIONS) {
       console.log('finishAutocomplete', (new Error()).stack);
     }
     this.clearAutocomplete();
@@ -159,7 +191,7 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
 
   /**
    * @param {!CodeMirror} codeMirror
-   * @param {!Array.<!CodeMirror.ChangeObject>} changes
+   * @param {!Array.<any>} changes
    */
   _changes(codeMirror, changes) {
     if (!changes.length) {
@@ -172,7 +204,8 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
       singleCharInput = (changeObject.origin === '+input' && changeObject.text.length === 1 && changeObject.text[0].length === 1) ||
         (this._isSuggestBoxVisible() && changeObject.origin === '+delete' && changeObject.removed.length === 1 && changeObject.removed[0].length === 1);
     }
-    if (dirac.DEBUG_COMPLETIONS) {
+    const diracAngel = Common.getDiracAngel();
+    if (diracAngel.toggles.DEBUG_COMPLETIONS) {
       console.log('_changes', singleCharInput, changes);
     }
     if (singleCharInput) {
@@ -191,15 +224,21 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
       return;
     }
 
+    // @ts-ignore
     const cursor = this._codeMirror.getCursor();
+    // @ts-ignore
     const scrollInfo = this._codeMirror.getScrollInfo();
+    // @ts-ignore
     const topmostLineNumber = this._codeMirror.lineAtHeight(scrollInfo.top, 'local');
+    // @ts-ignore
     const bottomLine = this._codeMirror.lineAtHeight(scrollInfo.top + scrollInfo.clientHeight, 'local');
     if (cursor.line < topmostLineNumber || cursor.line > bottomLine) {
       this.finishAutocomplete();
     } else {
       this._updateAnchorBox();
-      this._suggestBox.setPosition(this._anchorBox);
+      if (this._suggestBox && this._anchorBox) {
+        this._suggestBox.setPosition(this._anchorBox);
+      }
     }
   }
 
@@ -213,6 +252,7 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
       return;
     }
 
+    // @ts-ignore
     const cursor = this._codeMirror.getCursor();
     if (this._prefixRange) {
       if (cursor.line !== this._prefixRange.startLine ||
@@ -232,7 +272,8 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
   async complete(force) {
     // override with empty implementation to disable TextPrompt's autocomplete implementation
     // we use CodeMirror's changes modelled after TextEditorAutocompleteController.js in DiracPrompt
-    if (dirac.DEBUG_COMPLETIONS) {
+    const diracAngel = Common.getDiracAngel();
+    if (diracAngel.toggles.DEBUG_COMPLETIONS) {
       console.log('complete called => skip for disabling default auto-complete system');
     }
   }
@@ -257,6 +298,9 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
     return [];
   }
 
+  /**
+   * @param {string} prefix
+   */
   _javascriptCompletionTest(prefix) {
     // test if prefix starts with "js/", then we treat it as javascript completion
     const m = prefix.match(/^js\/(.*)/);
@@ -266,6 +310,7 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
         offset: 3
       };
     }
+    return null;
   }
 
   /**
@@ -279,30 +324,35 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
     this._lastAutocompleteRequest++;
 
     let shouldExit = false;
+    // @ts-ignore
     const cursor = this._codeMirror.getCursor();
+    // @ts-ignore
     const token = this._codeMirror.getTokenAt(cursor);
 
-    if (dirac.DEBUG_COMPLETIONS) {
+    const diracAngel = Common.getDiracAngel();
+    if (diracAngel.toggles.DEBUG_COMPLETIONS) {
       console.log('autocomplete:', cursor, token);
     }
 
     if (!token) {
-      if (dirac.DEBUG_COMPLETIONS) {
+      if (diracAngel.toggles.DEBUG_COMPLETIONS) {
         console.log('no autocomplete because no token');
       }
       shouldExit = true;
-    } else if (this._codeMirror.somethingSelected()) {
-      if (dirac.DEBUG_COMPLETIONS) {
-        console.log('no autocomplete because codeMirror.somethingSelected()');
-      }
-      shouldExit = true;
-    } else if (!force) {
-      if (token.end !== cursor.ch) {
-        if (dirac.DEBUG_COMPLETIONS) {
-          console.log('no autocomplete because cursor is not at the end of detected token');
-        }
-        shouldExit = true;
-      }
+    } else { // @ts-ignore
+      if (this._codeMirror.somethingSelected()) {
+            if (diracAngel.toggles.DEBUG_COMPLETIONS) {
+              console.log('no autocomplete because codeMirror.somethingSelected()');
+            }
+            shouldExit = true;
+          } else if (!force) {
+            if (token.end !== cursor.ch) {
+              if (diracAngel.toggles.DEBUG_COMPLETIONS) {
+                console.log('no autocomplete because cursor is not at the end of detected token');
+              }
+              shouldExit = true;
+            }
+          }
     }
 
     if (shouldExit) {
@@ -310,9 +360,10 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
       return;
     }
 
+    // @ts-ignore
     const prefix = this._codeMirror.getRange(new CodeMirror.Pos(cursor.line, token.start), cursor);
     const javascriptCompletion = this._javascriptCompletionTest(prefix);
-    if (dirac.DEBUG_COMPLETIONS) {
+    if (diracAngel.toggles.DEBUG_COMPLETIONS) {
       console.log("detected prefix='" + prefix + "'", javascriptCompletion);
     }
     if (javascriptCompletion) {
@@ -330,14 +381,15 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
    * @param {number} requestId
    * @param {string} input
    * @param {boolean} force
-   * @param {function(string, string, !UI.SuggestBox.Suggestions)} completionsReadyCallback
+   * @param {function(string, string, !UI.SuggestBox.Suggestions): null} completionsReadyCallback
    */
   _loadJavascriptCompletions(requestId, input, force, completionsReadyCallback) {
-    if (dirac.DEBUG_COMPLETIONS) {
+    const diracAngel = Common.getDiracAngel();
+    if (diracAngel.toggles.DEBUG_COMPLETIONS) {
       console.log('_loadJavascriptCompletions', input, force);
     }
     if (requestId !== this._lastAutocompleteRequest) {
-      if (dirac.DEBUG_COMPLETIONS) {
+      if (diracAngel.toggles.DEBUG_COMPLETIONS) {
         console.log('_loadJavascriptCompletions cancelled', requestId, this._lastAutocompleteRequest);
       }
       return;
@@ -372,11 +424,12 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
    * @param {!UI.SuggestBox.Suggestions} completions
    */
   _completionsForJavascriptReady(requestId, reverse, force, expression, prefix, completions) {
-    if (dirac.DEBUG_COMPLETIONS) {
+    const diracAngel = Common.getDiracAngel();
+    if (diracAngel.toggles.DEBUG_COMPLETIONS) {
       console.log('_completionsForJavascriptReady', prefix, reverse, force, expression, completions);
     }
     if (requestId !== this._lastAutocompleteRequest) {
-      if (dirac.DEBUG_COMPLETIONS) {
+      if (diracAngel.toggles.DEBUG_COMPLETIONS) {
         console.log('_completionsForJavascriptReady cancelled', requestId, this._lastAutocompleteRequest);
       }
       return;
@@ -398,12 +451,14 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
 
     const shouldShowForSingleItem = true; // later maybe implement inline completions like in TextPrompt.js
     if (this._anchorBox) {
-      if (dirac.DEBUG_COMPLETIONS) {
+      if (diracAngel.toggles.DEBUG_COMPLETIONS) {
         console.log('calling SuggestBox.updateSuggestions', this._anchorBox, completions, shouldShowForSingleItem, this._userEnteredText);
       }
-      this._suggestBox.updateSuggestions(this._anchorBox, completions, true, shouldShowForSingleItem, this._userEnteredText);
+      if (this._suggestBox) {
+        this._suggestBox.updateSuggestions(this._anchorBox, completions, true, shouldShowForSingleItem, this._userEnteredText);
+      }
     } else {
-      if (dirac.DEBUG_COMPLETIONS) {
+      if (diracAngel.toggles.DEBUG_COMPLETIONS) {
         console.log('not calling SuggestBox.updateSuggestions because this._anchorBox is null', completions, shouldShowForSingleItem, this._userEnteredText);
       }
     }
@@ -415,21 +470,23 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
    * @param {number} requestId
    * @param {string} input
    * @param {boolean} force
-   * @param {function(string, string, !Array.<string>, number=)} completionsReadyCallback
+   * @param {function(string, string, !Array.<string>, number=):any} completionsReadyCallback
    */
   _loadClojureScriptCompletions(requestId, input, force, completionsReadyCallback) {
-    if (dirac.DEBUG_COMPLETIONS) {
+    const diracAngel = Common.getDiracAngel();
+    if (diracAngel.toggles.DEBUG_COMPLETIONS) {
       console.log('_loadClojureScriptCompletions', input, force);
     }
     if (requestId !== this._lastAutocompleteRequest) {
-      if (dirac.DEBUG_COMPLETIONS) {
+      if (diracAngel.toggles.DEBUG_COMPLETIONS) {
         console.log('_loadClojureScriptCompletions cancelled', requestId, this._lastAutocompleteRequest);
       }
       return;
     }
-    const executionContext = self.UI.context.flavor(SDK.ExecutionContext);
+    const context = UI.Context.Context.instance();
+    const executionContext = context.flavor(SDK.ExecutionContext);
     if (!executionContext) {
-      if (dirac.DEBUG_COMPLETIONS) {
+      if (diracAngel.toggles.DEBUG_COMPLETIONS) {
         console.warn('no execution context available');
       }
       completionsReadyCallback('', '', []);
@@ -438,7 +495,7 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
 
     const debuggerModel = executionContext.debuggerModel;
     if (!debuggerModel) {
-      if (dirac.DEBUG_COMPLETIONS) {
+      if (diracAngel.toggles.DEBUG_COMPLETIONS) {
         console.warn('no debugger model available');
       }
       completionsReadyCallback('', '', []);
@@ -447,10 +504,11 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
 
     const makeSuggestStyle = (style = '') => `suggest-cljs ${style}`;
 
+    /**
+     * @param {string} name
+     */
     const namespaceSelector = name => {
-      return function (namespaceDescriptors) {
-        return namespaceDescriptors[name];
-      };
+      return namespaceDescriptors => namespaceDescriptors[name];
     };
     const selectCurrentNamespace = namespaceSelector(this._currentClojureScriptNamespace);
 
@@ -487,7 +545,7 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
         });
       };
 
-      const currentNamespaceDescriptorPromise = dirac.extractNamespacesAsync().then(selectCurrentNamespace);
+      const currentNamespaceDescriptorPromise = diracAngel.extractNamespacesAsync().then(selectCurrentNamespace);
 
       const resolvedNamespaceNamePromise = currentNamespaceDescriptorPromise.then(currentNamespaceDescriptor => {
         if (!currentNamespaceDescriptor) {
@@ -503,7 +561,7 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
         return new Promise(resolve => {
           const resultHandler = (expression, prefix, completions) => {
             const annotatedCompletions = styleQualifiedSymbols('suggest-cljs-qualified suggest-cljs-pseudo', completions);
-            if (dirac.DEBUG_COMPLETIONS) {
+            if (diracAngel.toggles.DEBUG_COMPLETIONS) {
               console.log('resultHandler got', expression, prefix, completions, annotatedCompletions);
             }
             resolve(annotatedCompletions);
@@ -518,34 +576,34 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
       const provideCompletionsForNamespace = ([namespaces, namespaceName]) => {
         const namespace = namespaces[namespaceName];
         if (!namespace) {
-          const macroNamespaceNames = dirac.getMacroNamespaceNames(namespaces);
+          const macroNamespaceNames = diracAngel.getMacroNamespaceNames(namespaces);
           if (!macroNamespaceNames.includes(namespaceName)) {
-            if (dirac.DEBUG_COMPLETIONS) {
+            if (diracAngel.toggles.DEBUG_COMPLETIONS) {
               console.log('no known namespace for ', namespaceName);
             }
             readyCallback([]);
             return;
           }
-          if (dirac.DEBUG_COMPLETIONS) {
+          if (diracAngel.toggles.DEBUG_COMPLETIONS) {
             console.log('namespace is a macro namespace', namespaceName);
           }
 
         }
 
         if (namespace && namespace.pseudo) {
-          if (dirac.DEBUG_COMPLETIONS) {
+          if (diracAngel.toggles.DEBUG_COMPLETIONS) {
             console.log('pseudo namespace => falling back to JS completions', namespaceName);
           }
           prepareAnnotatedJavascriptCompletionsForPseudoNamespaceAsync(namespaceName).then(readyCallback);
           return;
         }
 
-        if (dirac.DEBUG_COMPLETIONS) {
+        if (diracAngel.toggles.DEBUG_COMPLETIONS) {
           console.log('cljs namespace => retrieving symbols and macros from caches', namespaceName);
         }
-        const namespaceSymbolsPromise = dirac.extractNamespaceSymbolsAsync(namespaceName)
+        const namespaceSymbolsPromise = diracAngel.extractNamespaceSymbolsAsync(namespaceName)
           .then(annotateQualifiedSymbols.bind(this, 'suggest-cljs-qualified'));
-        const macroNamespaceSymbolsPromise = dirac.extractMacroNamespaceSymbolsAsync(namespaceName)
+        const macroNamespaceSymbolsPromise = diracAngel.extractMacroNamespaceSymbolsAsync(namespaceName)
           .then(annotateQualifiedSymbols.bind(this, 'suggest-cljs-qualified suggest-cljs-macro'));
 
         // order matters here, see _markAliasedCompletions below
@@ -557,7 +615,7 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
         Promise.all(jobs).then(concatAnnotatedResults).then(readyCallback);
       };
 
-      Promise.all([dirac.extractNamespacesAsync(), resolvedNamespaceNamePromise]).then(provideCompletionsForNamespace.bind(this));
+      Promise.all([diracAngel.extractNamespacesAsync(), resolvedNamespaceNamePromise]).then(provideCompletionsForNamespace.bind(this));
     } else {
       // general completion (without slashes)
       // combine: locals (if paused in debugger), current ns symbols, namespace names and cljs.core symbols
@@ -571,8 +629,8 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
       };
 
       /**
-       * @param {dirac.ScopeInfo} scopeInfo
-       * @return {!Array<dirac.ScopeFrameProp>}
+       * @param {diracAngel.ScopeInfo} scopeInfo
+       * @return {!Array<diracAngel.ScopeFrameProp>}
        */
       const extractLocalsFromScopeInfo = scopeInfo => {
         const locals = [];
@@ -642,7 +700,7 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
           return [];
         }
 
-        return dirac.extractNamespacesAsync().then(namespaces => {
+        return diracAngel.extractNamespacesAsync().then(namespaces => {
           const mapping = namespaceDescriptor[kind] || {};
           return Object.keys(mapping).filter(name => name.startsWith(input)).map(name => {
             const targetName = mapping[name];
@@ -668,17 +726,17 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
         }));
       };
 
-      const localsPromise = dirac.extractScopeInfoFromScopeChainAsync(debuggerModel.selectedCallFrame()).then(extractAndAnnotateLocals);
-      const currentNamespaceSymbolsPromise = dirac.extractNamespaceSymbolsAsync(this._currentClojureScriptNamespace).then(annotateSymbols.bind(this, 'suggest-cljs-in-ns'));
-      const namespaceNamesPromise = dirac.extractNamespacesAsync().then(annotateNamespaceNames);
-      const macroNamespaceNamesPromise = dirac.extractNamespacesAsync().then(dirac.getMacroNamespaceNames).then(annotateMacroNamespaceNames);
-      const coreNamespaceSymbolsPromise = dirac.extractNamespaceSymbolsAsync('cljs.core').then(annotateSymbols.bind(this, 'suggest-cljs-core'));
-      const currentNamespaceDescriptor = dirac.extractNamespacesAsync().then(selectCurrentNamespace);
+      const localsPromise = diracAngel.extractScopeInfoFromScopeChainAsync(debuggerModel.selectedCallFrame()).then(extractAndAnnotateLocals);
+      const currentNamespaceSymbolsPromise = diracAngel.extractNamespaceSymbolsAsync(this._currentClojureScriptNamespace).then(annotateSymbols.bind(this, 'suggest-cljs-in-ns'));
+      const namespaceNamesPromise = diracAngel.extractNamespacesAsync().then(annotateNamespaceNames);
+      const macroNamespaceNamesPromise = diracAngel.extractNamespacesAsync().then(diracAngel.getMacroNamespaceNames).then(annotateMacroNamespaceNames);
+      const coreNamespaceSymbolsPromise = diracAngel.extractNamespaceSymbolsAsync('cljs.core').then(annotateSymbols.bind(this, 'suggest-cljs-core'));
+      const currentNamespaceDescriptor = diracAngel.extractNamespacesAsync().then(selectCurrentNamespace);
       const namespaceAliasesPromise = currentNamespaceDescriptor.then(annotateAliasesOrRefers.bind(this, 'namespaceAliases', 'is ', 'suggest-cljs-ns-alias'));
       const macroNamespaceAliasesPromise = currentNamespaceDescriptor.then(annotateAliasesOrRefers.bind(this, 'macroNamespaceAliases', 'is ', 'suggest-cljs-ns-alias suggest-cljs-macro'));
       const namespaceRefersPromise = currentNamespaceDescriptor.then(annotateAliasesOrRefers.bind(this, 'namespaceRefers', 'in ', 'suggest-cljs-refer'));
       const macroRefersPromise = currentNamespaceDescriptor.then(annotateAliasesOrRefers.bind(this, 'macroRefers', 'in ', 'suggest-cljs-refer suggest-cljs-macro'));
-      const replSpecialsPromise = dirac.getReplSpecialsAsync().then(annotateReplSpecials);
+      const replSpecialsPromise = diracAngel.getReplSpecialsAsync().then(annotateReplSpecials);
 
       // order matters here, see _markAliasedCompletions below
       const jobs = [
@@ -707,19 +765,20 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
    * @param {!Array.<string>} completions
    */
   _completionsForClojureScriptReady(requestId, reverse, force, expression, prefix, completions) {
-    if (dirac.DEBUG_COMPLETIONS) {
+    const diracAngel = Common.getDiracAngel();
+    if (diracAngel.toggles.DEBUG_COMPLETIONS) {
       console.log('_completionsForClojureScriptReady', prefix, reverse, force, completions);
     }
 
     if (requestId !== this._lastAutocompleteRequest) {
-      if (dirac.DEBUG_COMPLETIONS) {
+      if (diracAngel.toggles.DEBUG_COMPLETIONS) {
         console.log('_loadClojureScriptCompletions cancelled', requestId, this._lastAutocompleteRequest);
       }
       return;
     }
 
     const sortCompletions = completions => {
-      return dirac.stableSort(completions, (a, b) => {
+      return diracAngel.stableSort(completions, (a, b) => {
         return a.text.localeCompare(b.text);
       });
     };
@@ -778,12 +837,12 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
       this._updateAnchorBox();
       const shouldShowForSingleItem = true; // later maybe implement inline completions like in TextPrompt.js
       if (this._anchorBox) {
-        if (dirac.DEBUG_COMPLETIONS) {
+        if (diracAngel.toggles.DEBUG_COMPLETIONS) {
           console.log('calling SuggestBox.updateSuggestions', this._anchorBox, processedCompletions, shouldShowForSingleItem, this._userEnteredText);
         }
         this._suggestBox.updateSuggestions(this._anchorBox, processedCompletions, true, shouldShowForSingleItem, this._userEnteredText);
       } else {
-        if (dirac.DEBUG_COMPLETIONS) {
+        if (diracAngel.toggles.DEBUG_COMPLETIONS) {
           console.log('not calling SuggestBox.updateSuggestions because this._anchorBox is null', processedCompletions, shouldShowForSingleItem, this._userEnteredText);
         }
       }
@@ -831,7 +890,8 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
    * @param {boolean=} isIntermediateSuggestion
    */
   applySuggestion(suggestion, isIntermediateSuggestion) {
-    if (dirac.DEBUG_COMPLETIONS) {
+    const diracAngel = Common.getDiracAngel();
+    if (diracAngel.toggles.DEBUG_COMPLETIONS) {
       console.log('applySuggestion', this._lastExpression, suggestion);
     }
     const suggestionText = suggestion ? suggestion.text : '';
@@ -851,7 +911,8 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
     }
 
     const selections = this._codeMirror.listSelections().slice();
-    if (dirac.DEBUG_COMPLETIONS) {
+    const diracAngel = Common.getDiracAngel();
+    if (diracAngel.toggles.DEBUG_COMPLETIONS) {
       console.log('acceptSuggestion', this._prefixRange, selections);
     }
     const prefixLength = this._prefixRange.endColumn - this._prefixRange.startColumn;
@@ -884,6 +945,13 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
     }
 
     return res.join('\n');
+  }
+
+  /**
+   * @param {boolean} value
+   */
+  setAddCompletionsFromHistory(value) {
+    // no op
   }
 
   /**
@@ -944,10 +1012,10 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
     }
 
     try {
-      dirac.ignoreEnter = true; // a workaround for https://github.com/binaryage/dirac/issues/72
-      UI.TextPrompt.TextPrompt.prototype.onKeyDown.apply(this, arguments);
+      this._ignoreEnter = true; // a workaround for https://github.com/binaryage/dirac/issues/72
+      super.onKeyDown(event);
     } finally {
-      dirac.ignoreEnter = false;
+      this._ignoreEnter = false;
     }
   }
 }

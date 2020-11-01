@@ -1,4 +1,3 @@
-// @ts-nocheck
 /*
  * Copyright (C) 2012 Google Inc. All rights reserved.
  *
@@ -845,10 +844,12 @@ export class Linkifier {
           result.push(action);
         }
       }
-      if (dirac.hasLinkActions) {
-        const diracAction = Components.Linkifier.diracLinkHandlerAction;
+      const diracAngel = Common.getDiracAngel();
+      if (diracAngel.toggles.hasLinkActions) {
+        const diracAction = diracAngel.diracLinkHandlerAction;
         if (diracAction) {
           result.unshift({
+            section: 'reveal',
             title: diracAction.title,
             handler: diracAction.handler.bind(null, result, contentProvider.contentURL(), lineNumber, columnNumber)
           });

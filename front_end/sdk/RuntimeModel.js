@@ -78,16 +78,25 @@ export class RuntimeModel extends SDKModel {
       'hasLinkActions'
     ];
 
+    const moduleSetting = Common.Settings.moduleSetting;
+    const diracAngel = Common.getDiracAngel();
     for (const flagName of flagNames) {
-      if (dirac.hostedInExtension) {
+      if (diracAngel.hostedInExtension) {
         // in hosted mode we receive flags via dirac_flags url param
         // we pass them down to moduleSetting
-        self.Common.moduleSetting(flagName).set(dirac.getToggle(flagName));
+        moduleSetting(flagName).set(diracAngel.getToggle(flagName));
       } else {
         // in internal mode we simply use flags from moduleSetting
-        dirac.setToggle(flagName, self.Common.moduleSetting(flagName).get());
+        diracAngel.setToggle(flagName, moduleSetting(flagName).get());
       }
-      self.Common.moduleSetting(flagName).addChangeListener(this._diracToggleChanged.bind(this, flagName));
+
+      /**
+       * @param {!Common.EventTarget.EventTargetEvent} event
+       */
+      const handler = event => {
+        diracAngel.setToggle(flagName, event.data);
+      };
+      moduleSetting(flagName).addChangeListener(handler);
     }
   }
 
@@ -277,14 +286,6 @@ export class RuntimeModel extends SDKModel {
   _customFormattersStateChanged(event) {
     const enabled = /** @type {boolean} */ (event.data);
     this._agent.invoke_setCustomObjectFormatterEnabled({enabled});
-  }
-
-  /**
-   * @param {string} name
-   * @param {!Common.EventTarget.EventTargetEvent} event
-   */
-  _diracToggleChanged(name, event) {
-    dirac.setToggle(name, event.data);
   }
 
   /**

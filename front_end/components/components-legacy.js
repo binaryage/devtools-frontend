@@ -29,9 +29,6 @@ Components.Linkifier.LinkHandlerSettingUI = ComponentsModule.Linkifier.LinkHandl
 /** @constructor */
 Components.Linkifier.ContentProviderContextMenuProvider = ComponentsModule.Linkifier.ContentProviderContextMenuProvider;
 
-/** @type {?Object} */
-Components.Linkifier.diracLinkHandlerAction = null;
-
 /** @interface */
 Components.LinkDecorator = ComponentsModule.Linkifier.LinkDecorator;
 

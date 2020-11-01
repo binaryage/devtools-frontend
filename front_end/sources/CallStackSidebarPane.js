@@ -1,4 +1,3 @@
-// @ts-nocheck
 /*
  * Copyright (C) 2008 Apple Inc. All Rights Reserved.
  *
@@ -238,15 +237,16 @@ export class CallStackSidebarPane extends UI.View.SimpleView {
     const title = element.createChild('div', 'call-frame-item-title');
     const titleElement = title.createChild('div', 'call-frame-title-text');
     titleElement.textContent = item.title;
-    if (dirac.hasBeautifyFunctionNames) {
-      if (item.functionName) {
-        titleElement.title = dirac.getFullFunctionName(item.functionName);
-      }
-    }
     if (item.isAsyncHeader) {
       element.classList.add('async-header');
     } else {
       titleElement.title = item.title;
+      const diracAngel = Common.getDiracAngel();
+      if (diracAngel.toggles.hasBeautifyFunctionNames) {
+        if (item.functionName) {
+          titleElement.title = diracAngel.getFullFunctionName(item.functionName);
+        }
+      }
       const linkElement = element.createChild('div', 'call-frame-location');
       linkElement.textContent = item.linkText.trimMiddle(30);
       linkElement.title = item.linkText;

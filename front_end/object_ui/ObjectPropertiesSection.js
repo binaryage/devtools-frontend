@@ -143,7 +143,7 @@ export class ObjectPropertiesSection extends UI.TreeOutline.TreeOutlineInShadow 
         return 2;
       }
       const name = property.name;
-      if (name.indexOf('__') != -1) {
+      if (name.indexOf('__') !== -1) {
         return 1;
       }
       return 0;
@@ -158,7 +158,8 @@ export class ObjectPropertiesSection extends UI.TreeOutline.TreeOutlineInShadow 
    * @return {number}
    */
   static CompareProperties(propertyA, propertyB) {
-    if (dirac.hasClusteredLocals) {
+    const diracAngel = Common.getDiracAngel();
+    if (diracAngel.toggles.hasClusteredLocals) {
       const clusterA = ObjectUI.ObjectPropertiesSection.PropertyCluster(propertyA);
       const clusterB = ObjectUI.ObjectPropertiesSection.PropertyCluster(propertyB);
 
@@ -741,7 +742,7 @@ export class ObjectPropertyTreeElement extends UI.TreeOutline.TreeElement {
      */
     function getFriendlyName(name) {
       const duIndex = name.indexOf('__');
-      if (duIndex != -1) {
+      if (duIndex !== -1) {
         return name.substring(0, duIndex);
       }
       const suMatch = name.match(/(.*?)_\d+$/);
@@ -751,6 +752,7 @@ export class ObjectPropertyTreeElement extends UI.TreeOutline.TreeElement {
       return null;
     }
 
+    const diracAngel = Common.getDiracAngel();
     const friendlyNamesTable = {};
     let previousProperty = null;
     const tailProperties = [];
@@ -762,15 +764,15 @@ export class ObjectPropertyTreeElement extends UI.TreeOutline.TreeElement {
         continue;
       }
 
-      if (dirac.hasClusteredLocals) {
+      if (diracAngel.toggles.hasClusteredLocals) {
         property._cluster = ObjectUI.ObjectPropertiesSection.PropertyCluster(property);
-        if (previousProperty && property._cluster != previousProperty._cluster) {
+        if (previousProperty && property._cluster !== previousProperty._cluster) {
           property._afterClusterBoundary = true;
           previousProperty._beforeClusterBoundary = true;
         }
       }
 
-      if (dirac.hasFriendlyLocals) {
+      if (diracAngel.toggles.hasFriendlyLocals) {
         const friendlyName = getFriendlyName(property.name);
         if (friendlyName) {
           property._friendlyName = friendlyName;
@@ -1315,6 +1317,7 @@ export class ObjectPropertyTreeElement extends UI.TreeOutline.TreeElement {
     return this.nameElement.title;
   }
 }
+
 
 /**
  * @unrestricted

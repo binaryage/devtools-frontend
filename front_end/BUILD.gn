@@ -34,6 +34,7 @@ group("front_end") {
     "developer_resources:bundle",
     "devices:bundle",
     "diff:bundle",
+    "dirac:bundle",
     "dom_extension:bundle",
     "elements:bundle",
     "emulated_devices/optimized:optimized_emulated_devices",

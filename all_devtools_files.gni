@@ -11,14 +11,6 @@ all_devtools_files = [
   "front_end/console/dirac-codemirror.css",
   "front_end/console/dirac-theme.css",
   "front_end/console/dirac-prompt.css",
-  "front_end/dirac/module.json",
-  "front_end/dirac/parinfer.js",
-  "front_end/dirac/parinfer-codemirror.js",
-  "front_end/dirac/keysim.js",
-  "front_end/dirac/dirac.js",
-  "front_end/dirac/require-implant.js",
-  "front_end/dirac_lazy/module.json",
-  "front_end/dirac_lazy/dirac_lazy.js",
   # dirac - end
   "front_end/shell.js",
   "front_end/accessibility_test_runner/accessibility_test_runner.js",
@@ -111,6 +103,9 @@ all_devtools_files = [
   "front_end/device_mode_test_runner/module.json",
   "front_end/devices/module.json",
   "front_end/diff/module.json",
+  # dirac start
+  "front_end/dirac/module.json",
+  # dirac end
   "front_end/dom_extension/module.json",
   "front_end/elements_test_runner/elements_test_runner.js",
   "front_end/elements_test_runner/EditDOMTestRunner.js",

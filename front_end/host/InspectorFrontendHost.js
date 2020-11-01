@@ -142,17 +142,17 @@ export class InspectorFrontendHostStub {
    * @suppressGlobalPropertiesCheck
    */
   inspectedURLChanged(url) {
-    // @ts-ignore
-    const dirac = window["dirac"];
-    if (!dirac.isIntercomReady()) {
+    // document.title = Common.UIString.UIString('DevTools - %s', url.replace(/^https?:\/\//, ''));
+    const diracAngel = Common.getDiracAngel();
+    if (!diracAngel.isIntercomReady()) {
       // postpone this code, we use document.title for signalling of frontend loading completion, see inspector.js
       const that = this;
       setTimeout(function() { that.inspectedURLChanged(url); }, 500);
       return;
     }
 
-    const version = dirac.getVersion();
-    dirac.getRuntimeTag(
+    const version = diracAngel.getVersion();
+    diracAngel.getRuntimeTag(
       /**
          * @suppressGlobalPropertiesCheck
          * @param {string} tag

@@ -40,6 +40,14 @@ export {UIString} from '../platform/platform.js';
 
 export const ls = Platform.UIString.ls;
 
+function getDiracAngel() {
+  // @ts-ignore
+  const angel = globalThis.diracAngel;
+  if (!angel) {
+    throw 'getDiracAngel called too early';
+  }
+  return angel;
+}
 
 /**
  * @type {!Settings.Settings}
@@ -75,4 +83,5 @@ export {
   Trie,
   Worker,
   WasmDisassembly,
+  getDiracAngel
 };

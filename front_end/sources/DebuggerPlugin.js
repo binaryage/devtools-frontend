@@ -1169,7 +1169,7 @@ export class DebuggerPlugin extends Plugin {
         const value = info.value;
         const propertyCount = value.preview ? value.preview.properties.length : 0;
         const entryCount = value.preview && value.preview.entries ? value.preview.entries.length : 0;
-        if (dirac.hasInlineCFs && value.customPreview()) {
+        if (diracAngel.toggles.hasInlineCFs && value.customPreview()) {
           const customValueEl = (new ObjectUI.CustomPreviewComponent.CustomPreviewComponent(value)).element;
           nameValuePair.appendChild(customValueEl);
         } else if (value.preview && propertyCount + entryCount < 10) {

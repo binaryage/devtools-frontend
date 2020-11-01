@@ -881,10 +881,17 @@ export class ConsoleViewMessage {
       }
     }
 
+    /**
+     * @param {!SDK.RemoteObject.RemoteObject|string|{description:string}|undefined} obj
+     */
     function rawFormatter(obj) {
-      const rawElement = createElement('div');
+      const rawElement = document.createElement('div');
       rawElement.setAttribute('class', 'raw-console-output');
-      rawElement.innerHTML = obj.description || '';
+      // @ts-ignore
+      if (obj && obj.description) {
+        // @ts-ignore
+        rawElement.innerHTML = obj.description;
+      }
       return rawElement;
     }
 
@@ -979,6 +986,7 @@ export class ConsoleViewMessage {
     }
 
     // Platform.StringUtilities.format does treat formattedResult like a Builder, result is an object.
+    // @ts-ignore
     return Platform.StringUtilities.format(format, parameters, formatters, formattedResult, append.bind(this));
   }
 
@@ -1922,6 +1930,69 @@ export class ConsoleCommandResult extends ConsoleViewMessage {
         const icon = UI.Icon.Icon.create('smallicon-command-result', 'command-result-icon');
         element.insertBefore(icon, element.firstChild);
       }
+    }
+    return element;
+  }
+}
+
+
+/**
+ * @unrestricted
+ */
+export class ConsoleDiracCommand extends ConsoleCommand {
+  /**
+   * @override
+   * @return {!HTMLElement}
+   */
+  contentElement() {
+    const element = super.contentElement();
+    if (!element.classList.contains('console-dirac-command')) {
+      element.classList.add('console-user-command', 'console-dirac-command');
+      const icon = UI.Icon.Icon.create('smallicon-user-command', 'command-result-icon');
+      element.insertBefore(icon, element.firstChild);
+
+      const superContent = element.querySelector('.source-code');
+      if (superContent) {
+        superContent.remove();
+      }
+
+      this._formattedCommand = document.createElement('span');
+      this._formattedCommand.classList.add('console-message-text', 'source-code', 'cm-s-dirac');
+      element.appendChild(this._formattedCommand);
+
+      // @ts-ignore
+      CodeMirror.runMode(this.text, 'clojure-parinfer', this._formattedCommand, undefined);
+
+      this.element().classList.add('dirac-flavor'); // applied to wrapper element
+    }
+    return element;
+  }
+}
+
+/**
+ * @unrestricted
+ */
+export class ConsoleDiracMarkup extends ConsoleCommand {
+  /**
+   * @override
+   * @return {!HTMLElement}
+   */
+  contentElement() {
+    const element = super.contentElement();
+    if (!element.classList.contains('console-dirac-markup')) {
+      element.classList.add('console-message', 'console-dirac-markup');
+
+      const superContent = element.querySelector('.source-code');
+      if (superContent) {
+        superContent.remove();
+      }
+
+      this._formattedCommand = document.createElement('span');
+      this._formattedCommand.classList.add('console-message-text', 'source-code');
+      this._formattedCommand.innerHTML = this.consoleMessage().messageText;
+      element.appendChild(this._formattedCommand);
+
+      this.element().classList.add('dirac-flavor'); // applied to wrapper element
     }
     return element;
   }

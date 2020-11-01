@@ -151,7 +151,8 @@ export class UISourceCode extends Common.ObjectWrapper.ObjectWrapper {
         name = decodeURI(name);
       }
       // @ts-ignore
-      if (dirac.hasCleanUrls) {
+      const diracAngel = Common.getDiracAngel();
+      if (diracAngel.toggles.hasCleanUrls) {
         // strip all after ? in the name
         const qmarkIndex = name.indexOf('?');
         if (qmarkIndex != -1) {
