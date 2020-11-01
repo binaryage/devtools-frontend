@@ -46,6 +46,7 @@ import {HARWriter} from './HARWriter.js';
 import {Events, NetworkGroupNode, NetworkLogViewInterface, NetworkNode, NetworkRequestNode} from './NetworkDataGridNode.js';  // eslint-disable-line no-unused-vars
 import {NetworkFrameGrouper} from './NetworkFrameGrouper.js';
 import {NetworkLogViewColumns} from './NetworkLogViewColumns.js';
+import {FilterOptions} from './NetworkPanel.js';  // eslint-disable-line no-unused-vars
 import {NetworkTimeBoundary, NetworkTimeCalculator, NetworkTransferDurationCalculator, NetworkTransferTimeCalculator,} from './NetworkTimeCalculator.js';  // eslint-disable-line no-unused-vars
 
 /**
@@ -1674,7 +1675,7 @@ export class NetworkLogView extends UI.Widget.VBox {
         !BrowserSDK.RelatedIssue.hasIssueOfCategory(request, SDK.Issue.IssueCategory.SameSiteCookie)) {
       return false;
     }
-    if (this._onlyBlockedRequestsUI.checked() && !request.wasBlocked()) {
+    if (this._onlyBlockedRequestsUI.checked() && !request.wasBlocked() && !request.corsErrorStatus()) {
       return false;
     }
     if (request.statusText === 'Service Worker Fallback Required') {
@@ -1798,10 +1799,10 @@ export class NetworkLogView extends UI.Widget.VBox {
   _createSizeFilter(value) {
     let multiplier = 1;
     if (value.endsWith('k')) {
-      multiplier = 1024;
+      multiplier = 1000;
       value = value.substring(0, value.length - 1);
     } else if (value.endsWith('m')) {
-      multiplier = 1024 * 1024;
+      multiplier = 1000 * 1000;
       value = value.substring(0, value.length - 1);
     }
     const quantity = Number(value);
@@ -1851,9 +1852,14 @@ export class NetworkLogView extends UI.Widget.VBox {
   /**
    * @override
    * @param {!SDK.NetworkRequest.NetworkRequest} request
+   * @param {!FilterOptions=} options - Optional parameters to change filter behavior
    */
-  selectRequest(request) {
-    this.setTextFilterValue('');
+  selectRequest(request, options) {
+    const defaultOptions = {clearFilter: true};
+    const {clearFilter} = options || defaultOptions;
+    if (clearFilter) {
+      this.setTextFilterValue('');
+    }
     const node = this._reveal(request);
     if (node) {
       node.select();

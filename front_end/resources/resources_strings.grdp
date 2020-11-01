@@ -516,6 +516,9 @@ as used by <ph name="LOCKED_1">Chrome</ph>
   <message name="IDS_DEVTOOLS_d6f875d9f87efbee1a96b8c4f5784d47" desc="Text in Indexed DBViews of the Application panel">
     Primary key
   </message>
+  <message name="IDS_DEVTOOLS_d7a1e7204fe33d28b31758538536c9d9" desc="Warning message for icons from the manifest">
+    Icon URL &apos;<ph name="ICON__SRC__">$1s<ex>foo/icon.png</ex></ph>&apos; failed to parse
+  </message>
   <message name="IDS_DEVTOOLS_d86027c2f92aae9917280fee9bca244d" desc="Warning message for icons from the manifest">
     Actual width (<ph name="IMAGE_NATURALWIDTH">$1s<ex>100</ex></ph>px) of icon <ph name="ICONURL">$2s<ex>https://example.com/icon.png</ex></ph> does not match specified width (<ph name="WIDTH">$3s<ex>100</ex></ph>px)
   </message>
@@ -554,6 +557,9 @@ as used by <ph name="LOCKED_1">Chrome</ph>
   </message>
   <message name="IDS_DEVTOOLS_e00a7ac13697ba51e098449fd644935b" desc="Text in Background Service View of the Application panel">
     Show events from other domains
+  </message>
+  <message name="IDS_DEVTOOLS_e10ca128af873836494b45103d8638e2" desc="Button label for service worker network requests">
+    Network requests
   </message>
   <message name="IDS_DEVTOOLS_e1368a2ca1f3c8fdac8b79b539cba5f7" desc="Aria text for table selected in WebSQL DatabaseQueryView in Application panel">
     Query: <ph name="QUERY">$1s<ex>"SELECT * FROM LOGS"</ex></ph>

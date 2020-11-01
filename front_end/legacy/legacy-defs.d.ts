@@ -11,6 +11,10 @@ interface Window {
   UI: {themeSupport: unknown}
 }
 
+declare class DOM {
+  constructor(doc: Document);
+}
+
 interface Array<T> {
   peekLast(): T | undefined;
   intersectOrdered(array: T[], comparator: (a: T, b: T) => number): T[];
@@ -122,7 +126,6 @@ interface Document {
 
 interface HTMLElement {
   createChild(tagName: string, className?: string, content?: string): HTMLElement;
-  createSVGChild(childType: string, className?: string): HTMLElement;
 }
 
 interface Element {

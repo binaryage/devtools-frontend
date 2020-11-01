@@ -13,7 +13,6 @@ import * as TextUtils from '../text_utils/text_utils.js';
 import * as UI from '../ui/ui.js';
 
 import {BezierPopoverIcon, ColorSwatchPopoverIcon, ShadowSwatchPopoverHelper} from './ColorSwatchPopoverIcon.js';
-import {createCSSAngle} from './CSSAngle_bridge.js';
 import {CSSPropertyPrompt, StylePropertiesSection, StylesSidebarPane, StylesSidebarPropertyRenderer,} from './StylesSidebarPane.js';  // eslint-disable-line no-unused-vars
 
 /** @type {!WeakMap<!StylesSidebarPane, !StylePropertyTreeElement>} */
@@ -144,9 +143,10 @@ export class StylePropertyTreeElement extends UI.TreeOutline.TreeElement {
 
   /**
    * @param {string} text
+   * @param {?Node=} valueChild
    * @return {!Node}
    */
-  _processColor(text) {
+  _processColor(text, valueChild) {
     const useUserSettingFormat = this._editable();
     const shiftClickMessage = Common.UIString.UIString('Shift + Click to change color format.');
     const tooltip =
@@ -154,13 +154,18 @@ export class StylePropertyTreeElement extends UI.TreeOutline.TreeElement {
 
     const swatch = InlineEditor.ColorSwatch.createColorSwatch();
     swatch.renderColor(text, useUserSettingFormat, tooltip);
-    const value = swatch.createChild('span');
-    value.textContent = swatch.color ? swatch.color.asString(swatch.format) : text;
+
+    if (!valueChild) {
+      valueChild = swatch.createChild('span');
+      valueChild.textContent = swatch.color ? swatch.color.asString(swatch.format) : text;
+    }
+    swatch.appendChild(valueChild);
 
     /** @param {!Event} event */
     const onFormatchanged = event => {
       const {data} = /** @type {*} */ (event);
-      value.textContent = data.text;
+      swatch.firstElementChild && swatch.firstElementChild.remove();
+      swatch.createChild('span').textContent = data.text;
     };
 
     swatch.addEventListener('format-changed', onFormatchanged);
@@ -177,17 +182,21 @@ export class StylePropertyTreeElement extends UI.TreeOutline.TreeElement {
    * @return {!Node}
    */
   _processVar(text) {
-    const swatch = InlineEditor.CSSVarSwatch.createCSSVarSwatch();
-    UI.UIUtils.createTextChild(swatch, text);
-
     const computedSingleValue = this._matchedStyles.computeSingleVariableValue(this._style, text);
     if (!computedSingleValue) {
       throw new Error('Unable to compute single value');
     }
     const {computedValue, fromFallback} = computedSingleValue;
-    swatch.data = {text, computedValue, fromFallback, onLinkClick: this._handleVarDefinitionClick.bind(this)};
 
-    return swatch;
+    const varSwatch = InlineEditor.CSSVarSwatch.createCSSVarSwatch();
+    UI.UIUtils.createTextChild(varSwatch, text);
+    varSwatch.data = {text, computedValue, fromFallback, onLinkClick: this._handleVarDefinitionClick.bind(this)};
+
+    if (!computedValue || !Common.Color.Color.parse(computedValue)) {
+      return varSwatch;
+    }
+
+    return this._processColor(computedValue, varSwatch);
   }
 
   /**
@@ -302,17 +311,20 @@ export class StylePropertyTreeElement extends UI.TreeOutline.TreeElement {
   }
 
   /**
-   * @param {string} propertyValue
+   * @param {string} angleText
    */
-  _processAngle(propertyValue) {
+  _processAngle(angleText) {
     if (!this._editable()) {
-      return document.createTextNode(propertyValue);
+      return document.createTextNode(angleText);
     }
-    const cssAngle = createCSSAngle();
+    const cssAngle = InlineEditor.CSSAngle.createCSSAngle();
     const valueElement = document.createElement('span');
-    valueElement.textContent = propertyValue;
+    valueElement.textContent = angleText;
+    const computedPropertyValue = this._matchedStyles.computeValue(this.property.ownerStyle, this.property.value) || '';
     cssAngle.data = {
-      angleText: propertyValue,
+      propertyName: this.property.name,
+      propertyValue: computedPropertyValue,
+      angleText,
       containingPane:
           /** @type {!HTMLElement} */ (this._parentPane.element.enclosingNodeOrSelfWithClass('style-panes-wrapper')),
     };
@@ -321,13 +333,17 @@ export class StylePropertyTreeElement extends UI.TreeOutline.TreeElement {
     /**
      * @param {!Event} event
      */
-    const popOverToggled = event => {
+    const popoverToggled = event => {
       const section = this.section();
       if (!section) {
         return;
       }
 
       const {data} = /** @type {*} */ (event);
+      if (data.open) {
+        this._parentPane.hideAllPopovers();
+        this._parentPane.activeCSSAngle = cssAngle;
+      }
 
       section.element.classList.toggle('has-open-popover', data.open);
       this._parentPane.setEditingStyle(data.open);
@@ -336,14 +352,17 @@ export class StylePropertyTreeElement extends UI.TreeOutline.TreeElement {
     /**
      * @param {!Event} event
      */
-    const valueChanged = event => {
+    const valueChanged = async event => {
       const {data} = /** @type {*} */ (event);
 
       valueElement.textContent = data.value;
-      this.applyStyleText(this.renderedPropertyText(), false);
+      await this.applyStyleText(this.renderedPropertyText(), false);
+      const computedPropertyValue =
+          this._matchedStyles.computeValue(this.property.ownerStyle, this.property.value) || '';
+      cssAngle.updateProperty(this.property.name, computedPropertyValue);
     };
 
-    cssAngle.addEventListener('popover-toggled', popOverToggled);
+    cssAngle.addEventListener('popover-toggled', popoverToggled);
     cssAngle.addEventListener('value-changed', valueChanged);
 
     return cssAngle;

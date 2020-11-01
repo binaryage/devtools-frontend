@@ -52,7 +52,7 @@ import {Events as StylesSidebarPaneEvents, StylesSidebarPane} from './StylesSide
  */
 const legacyNodeToNewBreadcrumbsNode = node => {
   return {
-    parentNode: node.parentNode,
+    parentNode: node.parentNode ? legacyNodeToNewBreadcrumbsNode(node.parentNode) : null,
     id: /** @type {number} */ (node.id),
     nodeType: node.nodeType(),
     pseudoType: node.pseudoType(),
@@ -116,7 +116,7 @@ export class ElementsPanel extends UI.Panel.Panel {
 
     crumbsContainer.appendChild(this._breadcrumbs);
 
-    this._stylesWidget = new StylesSidebarPane();
+    this._stylesWidget = StylesSidebarPane.instance();
     this._computedStyleWidget = new ComputedStyleWidget();
     this._metricsWidget = new MetricsSidebarPane();
 

@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// @ts-nocheck
-// TODO(crbug.com/1011811): Enable TypeScript compiler checks
-
 import * as Bindings from '../bindings/bindings.js';
 import * as Formatter from '../formatter/formatter.js';
+import * as Platform from '../platform/platform.js';
 import * as SDK from '../sdk/sdk.js';
 import * as TextUtils from '../text_utils/text_utils.js';
 import * as Workspace from '../workspace/workspace.js';  // eslint-disable-line no-unused-vars
 
-export const cachedMapSymbol = Symbol('cache');
-export const cachedIdentifiersSymbol = Symbol('cachedIdentifiers');
+/** @type {!WeakMap<!SDK.DebuggerModel.ScopeChainEntry, !Promise<!Map<string, string>>>} */
+const scopeToCachedIdentifiersMap = new WeakMap();
 
+/** @type {!WeakMap<!SDK.DebuggerModel.CallFrame, !Map<string,string>>} */
+const cachedMapBycallFrame = new WeakMap();
 /**
  * @unrestricted
  */
@@ -65,22 +65,20 @@ export class Mapping extends Array {
 export const scopeIdentifiers = function(scope) {
   const startLocation = scope.startLocation();
   const endLocation = scope.endLocation();
-
-  if (scope.type() === Protocol.Debugger.ScopeType.Global || !startLocation || !endLocation ||
-      !startLocation.script() || !startLocation.script().sourceMapURL ||
-      (startLocation.script() !== endLocation.script())) {
+  const startLocationScript = startLocation ? startLocation.script() : null;
+  if (scope.type() === Protocol.Debugger.ScopeType.Global || !startLocationScript || !endLocation ||
+      !startLocationScript.sourceMapURL || (startLocationScript !== endLocation.script())) {
     return Promise.resolve(/** @type {!Array<!Identifier>}*/ ([]));
   }
 
-  const script = startLocation.script();
-  return script.requestContent().then(onContent);
+  return startLocationScript.requestContent().then(onContent);
 
   /**
    * @param {!TextUtils.ContentProvider.DeferredContent} deferredContent
    * @return {!Promise<!Array<!Identifier>>}
    */
   function onContent(deferredContent) {
-    if (!deferredContent.content) {
+    if (!deferredContent.content || !startLocation || !endLocation) {
       return Promise.resolve(/** @type {!Array<!Identifier>}*/ ([]));
     }
 
@@ -124,7 +122,7 @@ export const scopeIdentifiers = function(scope) {
  * @return {!Promise<!Mapping>}
  */
 export const resolveScope = function(scope) {
-  let identifiersPromise = scope[cachedIdentifiersSymbol];
+  let identifiersPromise = scopeToCachedIdentifiersMap.get(scope);
   if (identifiersPromise) {
     return identifiersPromise;
   }
@@ -138,7 +136,7 @@ export const resolveScope = function(scope) {
   /** @type {!Map<string, !TextUtils.Text.Text>} */
   const textCache = new Map();
   identifiersPromise = scopeIdentifiers(scope).then(onIdentifiers);
-  scope[cachedIdentifiersSymbol] = identifiersPromise;
+  scopeToCachedIdentifiersMap.set(scope, identifiersPromise);
   return identifiersPromise;
 
   /**
@@ -151,6 +149,9 @@ export const resolveScope = function(scope) {
     // Extract as much as possible from SourceMap.
     for (let i = 0; i < identifiers.length; ++i) {
       const id = identifiers[i];
+      if (!sourceMap) {
+        continue;
+      }
       const entry = sourceMap.findEntry(id.lineNumber, id.columnNumber);
       if (entry && entry.name) {
         const compiled = new NameDescriptor(id.name, id.lineNumber, id.columnNumber);
@@ -188,8 +189,8 @@ export const resolveScope = function(scope) {
    * @return {!Promise<?NameDescriptor>}
    */
   function resolveSourceName(id) {
-    const startEntry = sourceMap.findEntry(id.lineNumber, id.columnNumber);
-    const endEntry = sourceMap.findEntry(id.lineNumber, id.columnNumber + id.name.length);
+    const startEntry = sourceMap ? sourceMap.findEntry(id.lineNumber, id.columnNumber) : null;
+    const endEntry = sourceMap ? sourceMap.findEntry(id.lineNumber, id.columnNumber + id.name.length) : null;
     if (!startEntry || !endEntry || !startEntry.sourceURL || startEntry.sourceURL !== endEntry.sourceURL ||
         !startEntry.sourceLineNumber || !startEntry.sourceColumnNumber || !endEntry.sourceLineNumber ||
         !endEntry.sourceColumnNumber) {
@@ -240,7 +241,7 @@ export const resolveScope = function(scope) {
  * @return {!Promise<!Mapping>}
  */
 export const allVariablesInCallFrame = function(callFrame) {
-  const cached = callFrame[cachedMapSymbol];
+  const cached = cachedMapBycallFrame.get(callFrame);
   if (cached) {
     return Promise.resolve(cached);
   }
@@ -428,14 +429,14 @@ export const resolveThisObject = function(callFrame) {
 
     const compiledName = thisRecords[0].compiledNameDescriptor.name;
     return callFrame
-        .evaluate({
+        .evaluate(/** @type {!SDK.RuntimeModel.EvaluationOptions} */ ({
           expression: compiledName,
           objectGroup: 'backtrace',
           includeCommandLineAPI: false,
           silent: true,
           returnByValue: false,
           generatePreview: true
-        })
+        }))
         .then(onEvaluated);
   }
 
@@ -444,7 +445,10 @@ export const resolveThisObject = function(callFrame) {
    * @return {?SDK.RemoteObject.RemoteObject}
    */
   function onEvaluated(result) {
-    return !result.exceptionDetails && result.object ? result.object : callFrame.thisObject();
+    if ('exceptionDetails' in result && callFrame) {
+      return !result.exceptionDetails && result.object ? result.object : callFrame.thisObject();
+    }
+    return null;
   }
 };
 
@@ -455,10 +459,10 @@ export const resolveThisObject = function(callFrame) {
 export const resolveScopeInObject = function(scope) {
   const startLocation = scope.startLocation();
   const endLocation = scope.endLocation();
+  const startLocationScript = startLocation ? startLocation.script() : null;
 
-  if (scope.type() === Protocol.Debugger.ScopeType.Global || !startLocation || !endLocation ||
-      !startLocation.script() || !startLocation.script().sourceMapURL ||
-      startLocation.script() !== endLocation.script()) {
+  if (scope.type() === Protocol.Debugger.ScopeType.Global || !startLocationScript || !endLocation ||
+      !startLocationScript.sourceMapURL || startLocationScript !== endLocation.script()) {
     return scope.object();
   }
 
@@ -632,9 +636,10 @@ export class RemoteObject extends SDK.RemoteObject.RemoteObject {
 
   /**
    * @override
-   * @param {function(this:Object, ...)} functionDeclaration
+   * @param {function(this:Object, ...?):T} functionDeclaration
    * @param {!Array<!Protocol.Runtime.CallArgument>=} args
    * @return {!Promise<!SDK.RemoteObject.CallFunctionResult>}
+   * @template T
    */
   callFunction(functionDeclaration, args) {
     return this._object.callFunction(functionDeclaration, args);
@@ -643,7 +648,7 @@ export class RemoteObject extends SDK.RemoteObject.RemoteObject {
 
   /**
    * @override
-   * @param {function(this:Object, ...):T} functionDeclaration
+   * @param {function(this:Object, ...?):T} functionDeclaration
    * @param {!Array<!Protocol.Runtime.CallArgument>|undefined} args
    * @return {!Promise<T>}
    * @template T
@@ -683,3 +688,23 @@ export class RemoteObject extends SDK.RemoteObject.RemoteObject {
     return this._object.isNode();
   }
 }
+
+/**
+ * @type {function(...*):*} scope
+ */
+let _scopeResolvedForTest = function() {};
+
+
+/**
+ * @return {function(...*):*} scope
+ */
+export const getScopeResolvedForTest = () => {
+  return _scopeResolvedForTest;
+};
+
+/**
+ * @param {function(...*):*} scope
+ */
+export const setScopeResolvedForTest = scope => {
+  _scopeResolvedForTest = scope;
+};

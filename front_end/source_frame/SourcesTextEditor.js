@@ -228,7 +228,7 @@ export class SourcesTextEditor extends TextEditor.CodeMirrorTextEditor.CodeMirro
   /**
    * @param {!TextUtils.TextRange.TextRange} range
    * @param {string} cssClass
-   * @return {!Object}
+   * @return {!CodeMirror.TextMarker}
    */
   highlightRange(range, cssClass) {
     cssClass = 'CodeMirror-persist-highlight ' + cssClass;
@@ -1065,5 +1065,5 @@ const LinesToScanForIndentationGuessing = 1000;
 const MaximumNumberOfWhitespacesPerSingleSpan = 16;
 export const lineNumbersGutterType = 'CodeMirror-linenumbers';
 
-/** @typedef {{gutterType: string, lineNumber: number, event: !Event}} */
+/** @typedef {{gutterType: string, lineNumber: number, event: !MouseEvent}} */
 export let GutterClickEventData;

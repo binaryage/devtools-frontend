@@ -151,21 +151,18 @@ Sources.SearchSourcesView = SourcesModule.SearchSourcesView.SearchSourcesView;
 Sources.SearchSourcesView.ActionDelegate = SourcesModule.SearchSourcesView.ActionDelegate;
 
 /** @constructor */
-Sources.SimpleHistoryManager = SourcesModule.SimpleHistoryManager.SimpleHistoryManager;
-
-/** @interface */
-Sources.HistoryEntry = SourcesModule.SimpleHistoryManager.HistoryEntry;
-
-/** @constructor */
 Sources.SnippetsPlugin = SourcesModule.SnippetsPlugin.SnippetsPlugin;
 
 Sources.SourceMapNamesResolver = {};
 
-// Tests can override this global symbol and therefore can't be exported
-Sources.SourceMapNamesResolver._scopeResolvedForTest = function() {};
+Sources.SourceMapNamesResolver.setScopeResolvedForTest = SourcesModule.SourceMapNamesResolver.setScopeResolvedForTest;
 
-Sources.SourceMapNamesResolver._cachedMapSymbol = SourcesModule.SourceMapNamesResolver.cachedMapSymbol;
-Sources.SourceMapNamesResolver._cachedIdentifiersSymbol = SourcesModule.SourceMapNamesResolver.cachedIdentifiersSymbol;
+// Tests can override this global symbol and therefore can't be exported
+Object.defineProperty(Sources.SourceMapNamesResolver, '_scopeResolvedForTest', {
+  get: SourcesModule.SourceMapNamesResolver.getScopeResolvedForTest,
+  set: SourcesModule.SourceMapNamesResolver.setScopeResolvedForTest,
+});
+
 Sources.SourceMapNamesResolver._scopeIdentifiers = SourcesModule.SourceMapNamesResolver.scopeIdentifiers;
 Sources.SourceMapNamesResolver._resolveScope = SourcesModule.SourceMapNamesResolver.resolveScope;
 Sources.SourceMapNamesResolver._allVariablesInCallFrame = SourcesModule.SourceMapNamesResolver.allVariablesInCallFrame;

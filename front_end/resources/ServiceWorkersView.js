@@ -2,14 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// @ts-nocheck
-// TODO(crbug.com/1011811): Enable TypeScript compiler checks
-
 import * as Common from '../common/common.js';
 import * as Components from '../components/components.js';
 import * as MobileThrottling from '../mobile_throttling/mobile_throttling.js';
+import * as Network from '../network/network.js';
 import * as SDK from '../sdk/sdk.js';
 import * as UI from '../ui/ui.js';
+
+let throttleDisabledForDebugging = false;
+/**
+ * @param {boolean} enable
+ */
+export const setThrottleDisabledForDebugging = enable => {
+  throttleDisabledForDebugging = enable;
+};
 
 /**
  * @implements {SDK.SDKModel.SDKModelObserver<!SDK.ServiceWorkerManager.ServiceWorkerManager>}
@@ -30,13 +36,14 @@ export class ServiceWorkersView extends UI.Widget.VBox {
 
     /** @type {!Map<!SDK.ServiceWorkerManager.ServiceWorkerRegistration, !Section>} */
     this._sections = new Map();
-    /** @type {symbol} */
-    this._registrationSymbol = Symbol('Resources.ServiceWorkersView');
 
     /** @type {?SDK.ServiceWorkerManager.ServiceWorkerManager} */
     this._manager = null;
     /** @type {?SDK.SecurityOriginManager.SecurityOriginManager} */
     this._securityOriginManager = null;
+
+    /** @type {!WeakMap<!UI.ReportView.Section, !SDK.ServiceWorkerManager.ServiceWorkerRegistration>} */
+    this._sectionToRegistration = new WeakMap();
 
     const othersDiv = this.contentElement.createChild('div', 'service-workers-other-origin');
     const othersView = new UI.ReportView.ReportView();
@@ -47,8 +54,8 @@ export class ServiceWorkersView extends UI.Widget.VBox {
     const seeOthers = UI.Fragment.html
     `<a class="devtools-link" role="link" tabindex="0" href="chrome://serviceworker-internals" target="_blank" style="display: inline; cursor: pointer;">See all registrations</a>`;
     self.onInvokeElement(seeOthers, event => {
-      const agent = SDK.SDKModel.TargetManager.instance().mainTarget().targetAgent();
-      agent.invoke_createTarget({url: 'chrome://serviceworker-internals?devtools'});
+      const mainTarget = SDK.SDKModel.TargetManager.instance().mainTarget();
+      mainTarget && mainTarget.targetAgent().invoke_createTarget({url: 'chrome://serviceworker-internals?devtools'});
       event.consume(true);
     });
     othersSectionRow.appendChild(seeOthers);
@@ -71,6 +78,21 @@ export class ServiceWorkersView extends UI.Widget.VBox {
     this._eventListeners = new Map();
     SDK.SDKModel.TargetManager.instance().observeModels(SDK.ServiceWorkerManager.ServiceWorkerManager, this);
     this._updateListVisibility();
+
+    /**
+     * @param {!Event} event
+     */
+    const drawerChangeHandler = event => {
+      // @ts-ignore: No support for custom event listener
+      const isDrawerOpen = event.detail && event.detail.isDrawerOpen;
+      if (this._manager && !isDrawerOpen && this._manager.serviceWorkerNetworkRequestsPanelOpen) {
+        const networkLocation = UI.ViewManager.ViewManager.instance().locationNameForViewId('network');
+        UI.ViewManager.ViewManager.instance().showViewInLocation('network', networkLocation, false);
+        Network.NetworkPanel.NetworkPanel.revealAndFilter([]);
+        this._manager.serviceWorkerNetworkRequestsPanelOpen = false;
+      }
+    };
+    document.body.addEventListener(UI.InspectorView.Events.DrawerChange, drawerChangeHandler);
   }
 
   /**
@@ -82,7 +104,9 @@ export class ServiceWorkersView extends UI.Widget.VBox {
       return;
     }
     this._manager = serviceWorkerManager;
-    this._securityOriginManager = serviceWorkerManager.target().model(SDK.SecurityOriginManager.SecurityOriginManager);
+    this._securityOriginManager =
+        /** @type {!SDK.SecurityOriginManager.SecurityOriginManager} */ (
+            serviceWorkerManager.target().model(SDK.SecurityOriginManager.SecurityOriginManager));
 
     for (const registration of this._manager.registrations().values()) {
       this._updateRegistration(registration);
@@ -109,12 +133,11 @@ export class ServiceWorkersView extends UI.Widget.VBox {
       return;
     }
 
-    Common.EventTarget.EventTarget.removeEventListeners(this._eventListeners.get(serviceWorkerManager));
+    Common.EventTarget.EventTarget.removeEventListeners(this._eventListeners.get(serviceWorkerManager) || []);
     this._eventListeners.delete(serviceWorkerManager);
     this._manager = null;
     this._securityOriginManager = null;
   }
-
 
   /**
    * @param {!SDK.ServiceWorkerManager.ServiceWorkerRegistration} registration
@@ -149,7 +172,7 @@ export class ServiceWorkersView extends UI.Widget.VBox {
     const movedSections = [];
     for (const section of this._sections.values()) {
       const expectedView = this._getReportViewForOrigin(section._registration.securityOrigin);
-      hasThis |= expectedView === this._currentWorkersView;
+      hasThis = hasThis || expectedView === this._currentWorkersView;
       if (section._section.parentWidget() !== expectedView) {
         movedSections.push(section);
       }
@@ -161,9 +184,11 @@ export class ServiceWorkersView extends UI.Widget.VBox {
       this._updateRegistration(registration, true);
     }
 
-    this._currentWorkersView.sortSections((a, b) => {
-      const aTimestamp = this._getTimeStamp(a[this._registrationSymbol]);
-      const bTimestamp = this._getTimeStamp(b[this._registrationSymbol]);
+    this._currentWorkersView.sortSections((aSection, bSection) => {
+      const aRegistration = this._sectionToRegistration.get(aSection);
+      const bRegistration = this._sectionToRegistration.get(bSection);
+      const aTimestamp = aRegistration ? this._getTimeStamp(aRegistration) : 0;
+      const bTimestamp = bRegistration ? this._getTimeStamp(bRegistration) : 0;
       // the newest (largest timestamp value) should be the first
       return bTimestamp - aTimestamp;
     });
@@ -190,6 +215,9 @@ export class ServiceWorkersView extends UI.Widget.VBox {
   }
 
   _gcRegistrations() {
+    if (!this._manager || !this._securityOriginManager) {
+      return;
+    }
     let hasNonDeletedRegistrations = false;
     const securityOrigins = new Set(this._securityOriginManager.securityOrigins());
     for (const registration of this._manager.registrations().values()) {
@@ -219,8 +247,9 @@ export class ServiceWorkersView extends UI.Widget.VBox {
    * @return {?UI.ReportView.ReportView}
    */
   _getReportViewForOrigin(origin) {
-    if (this._securityOriginManager.securityOrigins().includes(origin) ||
-        this._securityOriginManager.unreachableMainSecurityOrigin() === origin) {
+    if (this._securityOriginManager &&
+        (this._securityOriginManager.securityOrigins().includes(origin) ||
+         this._securityOriginManager.unreachableMainSecurityOrigin() === origin)) {
       return this._currentWorkersView;
     }
     return null;
@@ -240,7 +269,7 @@ export class ServiceWorkersView extends UI.Widget.VBox {
       }
       const uiSection = reportView.appendSection(title);
       uiSection.setUiGroupTitle(ls`Service worker for ${title}`);
-      uiSection[this._registrationSymbol] = registration;
+      this._sectionToRegistration.set(uiSection, registration);
       section = new Section(
           /** @type {!SDK.ServiceWorkerManager.ServiceWorkerManager} */ (this._manager), uiSection, registration);
       this._sections.set(registration, section);
@@ -309,6 +338,10 @@ export class Section {
 
     this._toolbar = section.createToolbar();
     this._toolbar.renderAsLinks();
+    this._networkRequests = new UI.Toolbar.ToolbarButton(
+        Common.UIString.UIString('Network requests'), undefined, Common.UIString.UIString('Network requests'));
+    this._networkRequests.addEventListener(UI.Toolbar.ToolbarButton.Events.Click, this._networkRequestsClicked, this);
+    this._toolbar.appendToolbarItem(this._networkRequests);
     this._updateButton =
         new UI.Toolbar.ToolbarButton(Common.UIString.UIString('Update'), undefined, Common.UIString.UIString('Update'));
     this._updateButton.addEventListener(UI.Toolbar.ToolbarButton.Events.Click, this._updateButtonClicked, this);
@@ -342,7 +375,7 @@ export class Section {
    * @param {string} label
    * @param {string} initialValue
    * @param {string} placeholder
-   * @param {function(string)} callback
+   * @param {function(string):void} callback
    */
   _createSyncNotificationField(label, initialValue, placeholder, callback) {
     const form =
@@ -357,14 +390,17 @@ export class Section {
     editor.placeholder = placeholder;
     UI.ARIAUtils.setAccessibleName(editor, label);
 
-    form.addEventListener('submit', e => {
-      callback(editor.value || '');
-      e.consume(true);
-    });
+    form.addEventListener(
+        'submit',
+        /** @param {!Event} e */
+        e => {
+          callback(editor.value || '');
+          e.consume(true);
+        });
   }
 
   _scheduleUpdate() {
-    if (ServiceWorkersView._noThrottle) {
+    if (throttleDisabledForDebugging) {
       this._update();
       return;
     }
@@ -410,7 +446,10 @@ export class Section {
         this._updateClientInfo(
             clientLabelText, /** @type {!Protocol.Target.TargetInfo} */ (this._clientInfoCache.get(client)));
       }
-      this._manager.target().targetAgent().getTargetInfo(client).then(this._onClientInfo.bind(this, clientLabelText));
+      this._manager.target()
+          .targetAgent()
+          .invoke_getTargetInfo({targetId: client})
+          .then(this._onClientInfo.bind(this, clientLabelText));
     }
   }
 
@@ -421,7 +460,8 @@ export class Section {
     this._sourceField.removeChildren();
     const fileName = Common.ParsedURL.ParsedURL.extractName(version.scriptURL);
     const name = this._sourceField.createChild('div', 'report-field-value-filename');
-    const link = Components.Linkifier.Linkifier.linkifyURL(version.scriptURL, {text: fileName});
+    const link = Components.Linkifier.Linkifier.linkifyURL(
+        version.scriptURL, /** @type {!Components.Linkifier.LinkifyURLOptions} */ ({text: fileName}));
     link.tabIndex = 0;
     name.appendChild(link);
     if (this._registration.errors.length) {
@@ -432,12 +472,14 @@ export class Section {
       self.onInvokeElement(errorsLabel, () => Common.Console.Console.instance().show());
       name.appendChild(errorsLabel);
     }
-    this._sourceField.createChild('div', 'report-field-value-subtitle').textContent =
-        Common.UIString.UIString('Received %s', new Date(version.scriptResponseTime * 1000).toLocaleString());
+    if (version.scriptResponseTime !== undefined) {
+      this._sourceField.createChild('div', 'report-field-value-subtitle').textContent =
+          Common.UIString.UIString('Received %s', new Date(version.scriptResponseTime * 1000).toLocaleString());
+    }
   }
 
   /**
-   * @return {!Promise}
+   * @return {!Promise<void>}
    */
   _update() {
     const fingerprint = this._registration.fingerprint();
@@ -490,8 +532,10 @@ export class Section {
           versionsStack, 'service-worker-waiting-circle',
           Common.UIString.UIString('#%s waiting to activate', waiting.id));
       this._createLink(waitingEntry, Common.UIString.UIString('skipWaiting'), this._skipButtonClicked.bind(this));
-      waitingEntry.createChild('div', 'service-worker-subtitle').textContent =
-          Common.UIString.UIString('Received %s', new Date(waiting.scriptResponseTime * 1000).toLocaleString());
+      if (waiting.scriptResponseTime !== undefined) {
+        waitingEntry.createChild('div', 'service-worker-subtitle').textContent =
+            Common.UIString.UIString('Received %s', new Date(waiting.scriptResponseTime * 1000).toLocaleString());
+      }
       if (!this._targetForVersionId(waiting.id) && (waiting.isRunning() || waiting.isStarting())) {
         this._createLink(
             waitingEntry, Common.UIString.UIString('inspect'), this._inspectButtonClicked.bind(this, waiting.id));
@@ -501,8 +545,10 @@ export class Section {
       const installingEntry = this._addVersion(
           versionsStack, 'service-worker-installing-circle',
           Common.UIString.UIString('#%s trying to install', installing.id));
-      installingEntry.createChild('div', 'service-worker-subtitle').textContent =
-          Common.UIString.UIString('Received %s', new Date(installing.scriptResponseTime * 1000).toLocaleString());
+      if (installing.scriptResponseTime !== undefined) {
+        installingEntry.createChild('div', 'service-worker-subtitle').textContent =
+            Common.UIString.UIString('Received %s', new Date(installing.scriptResponseTime * 1000).toLocaleString());
+      }
       if (!this._targetForVersionId(installing.id) && (installing.isRunning() || installing.isStarting())) {
         this._createLink(
             installingEntry, Common.UIString.UIString('inspect'), this._inspectButtonClicked.bind(this, installing.id));
@@ -514,17 +560,21 @@ export class Section {
   /**
    * @param {!Element} parent
    * @param {string} title
-   * @param {function()} listener
+   * @param {function():void} listener
    * @param {string=} className
    * @param {boolean=} useCapture
    * @return {!Element}
    */
   _createLink(parent, title, listener, className, useCapture) {
-    const button = parent.createChild('button', className);
+    const button = /** @type {!HTMLElement} */ (document.createElement('button'));
+    if (className) {
+      button.className = className;
+    }
     button.classList.add('link', 'devtools-link');
     button.textContent = title;
     button.tabIndex = 0;
     button.addEventListener('click', listener, useCapture);
+    parent.appendChild(button);
     return button;
   }
 
@@ -540,6 +590,42 @@ export class Section {
    */
   _updateButtonClicked(event) {
     this._manager.updateRegistration(this._registration.id);
+  }
+
+  /**
+   * @param {!Common.EventTarget.EventTargetEvent} event
+   */
+  _networkRequestsClicked(event) {
+    const applicationTabLocation = UI.ViewManager.ViewManager.instance().locationNameForViewId('resources');
+    const networkTabLocation = applicationTabLocation === 'drawer-view' ? 'panel' : 'drawer-view';
+    UI.ViewManager.ViewManager.instance().showViewInLocation('network', networkTabLocation);
+
+    Network.NetworkPanel.NetworkPanel.revealAndFilter([
+      {
+        filterType: Network.NetworkLogView.FilterType.Is,
+        filterValue: Network.NetworkLogView.IsFilterType.ServiceWorkerIntercepted,
+      },
+    ]);
+
+    const requests = SDK.NetworkLog.NetworkLog.instance().requests();
+    let lastRequest = null;
+    if (Array.isArray(requests)) {
+      for (const request of requests) {
+        if (!lastRequest && request.fetchedViaServiceWorker) {
+          lastRequest = request;
+        }
+        if (request.fetchedViaServiceWorker && lastRequest &&
+            lastRequest.responseReceivedTime < request.responseReceivedTime) {
+          lastRequest = request;
+        }
+      }
+    }
+    if (lastRequest) {
+      Network.NetworkPanel.NetworkPanel.selectAndShowRequest(
+          lastRequest, Network.NetworkItemView.Tabs.Timing, {clearFilter: false});
+    }
+
+    this._manager.serviceWorkerNetworkRequestsPanelOpen = true;
   }
 
   /**
@@ -568,9 +654,10 @@ export class Section {
 
   /**
    * @param {!Element} element
-   * @param {?Protocol.Target.TargetInfo} targetInfo
+   * @param {!Protocol.Target.GetTargetInfoResponse} targetInfoResponse
    */
-  _onClientInfo(element, targetInfo) {
+  _onClientInfo(element, targetInfoResponse) {
+    const targetInfo = targetInfoResponse.targetInfo;
     if (!targetInfo) {
       return;
     }
@@ -599,7 +686,7 @@ export class Section {
    * @param {string} targetId
    */
   _activateTarget(targetId) {
-    this._manager.target().targetAgent().activateTarget(targetId);
+    this._manager.target().targetAgent().invoke_activateTarget({targetId});
   }
 
   _startButtonClicked() {
@@ -631,7 +718,7 @@ export class Section {
   _wrapWidget(container) {
     const shadowRoot = UI.Utils.createShadowRootWithCoreStyles(container);
     UI.Utils.appendStyle(shadowRoot, 'resources/serviceWorkersView.css');
-    const contentElement = createElement('div');
+    const contentElement = document.createElement('div');
     shadowRoot.appendChild(contentElement);
     return contentElement;
   }

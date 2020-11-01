@@ -277,16 +277,16 @@ export const OfflineConditions = {
 /** @type {!Conditions} */
 export const Slow3GConditions = {
   title: Common.UIString.UIString('Slow 3G'),
-  download: 500 * 1024 / 8 * .8,
-  upload: 500 * 1024 / 8 * .8,
+  download: 500 * 1000 / 8 * .8,
+  upload: 500 * 1000 / 8 * .8,
   latency: 400 * 5,
 };
 
 /** @type {!Conditions} */
 export const Fast3GConditions = {
   title: Common.UIString.UIString('Fast 3G'),
-  download: 1.6 * 1024 * 1024 / 8 * .9,
-  upload: 750 * 1024 / 8 * .9,
+  download: 1.6 * 1000 * 1000 / 8 * .9,
+  upload: 750 * 1000 / 8 * .9,
   latency: 150 * 3.75,
 };
 
@@ -642,8 +642,15 @@ export class NetworkDispatcher {
    * @override
    * @param {!Protocol.Network.LoadingFailedEvent} request
    */
-  loadingFailed(
-      {requestId, timestamp: time, type: resourceType, errorText: localizedDescription, canceled, blockedReason}) {
+  loadingFailed({
+    requestId,
+    timestamp: time,
+    type: resourceType,
+    errorText: localizedDescription,
+    canceled,
+    blockedReason,
+    corsErrorStatus
+  }) {
     const networkRequest = this._inflightRequestsById.get(requestId);
     if (!networkRequest) {
       return;
@@ -659,6 +666,9 @@ export class NetworkDispatcher {
         this._manager.dispatchEventToListeners(
             Events.MessageGenerated, {message: message, requestId: requestId, warning: true});
       }
+    }
+    if (corsErrorStatus) {
+      networkRequest.setCorsErrorStatus(corsErrorStatus);
     }
     networkRequest.localizedFailDescription = localizedDescription;
     this._getExtraInfoBuilder(requestId).finished();
