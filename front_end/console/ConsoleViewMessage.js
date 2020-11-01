@@ -39,6 +39,7 @@ import * as ThemeSupport from '../theme_support/theme_support.js';
 import * as UI from '../ui/ui.js';
 
 import {ConsoleViewportElement} from './ConsoleViewport.js';  // eslint-disable-line no-unused-vars
+import './clojure-parinfer.js';
 
 /** @type {!WeakMap<!Element, !ConsoleViewMessage>} */
 const elementToMessage = new WeakMap();
@@ -1980,10 +1981,9 @@ export class ConsoleDiracCommand extends ConsoleCommand {
 
       this._formattedCommand = document.createElement('span');
       this._formattedCommand.classList.add('console-message-text', 'source-code', 'cm-s-dirac');
-      element.appendChild(this._formattedCommand);
-
       // @ts-ignore
       CodeMirror.runMode(this.text, 'clojure-parinfer', this._formattedCommand, undefined);
+      element.appendChild(this._formattedCommand);
 
       this.element().classList.add('dirac-flavor'); // applied to wrapper element
     }

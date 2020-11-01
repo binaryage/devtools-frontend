@@ -17,6 +17,7 @@ devtools_module("console") {
     "ConsoleView.js",
     "ConsoleViewMessage.js",
     "ConsoleViewport.js",
+    "clojure-parinfer.js"
   ]
 
   deps = [

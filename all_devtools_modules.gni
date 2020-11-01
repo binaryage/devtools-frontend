@@ -131,6 +131,7 @@ all_typescript_module_sources = [
   "third_party/codemirror/package/addon/runmode/runmode.js",
   "third_party/codemirror/package/addon/display/placeholder.js",
   "console/ConsoleDiracPrompt.js",
+  "console/clojure-parinfer.js",
   # dirac - end
   "dom_extension/DOMExtension.js",
   "elements/Adorner.js",
