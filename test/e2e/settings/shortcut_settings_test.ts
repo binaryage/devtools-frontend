@@ -4,26 +4,25 @@
 
 import {assert} from 'chai';
 
-import {enableExperiment, getBrowserAndPages, waitFor, waitForElementWithTextContent, waitForFunction, waitForNoElementsWithTextContent} from '../../shared/helper.js';
+import {enableExperiment, getBrowserAndPages, waitFor, waitForFunction, waitForNoElementsWithTextContent} from '../../shared/helper.js';
 import {describe, it} from '../../shared/mocha-extensions.js';
 import {getSelectedItemText, QUICK_OPEN_SELECTOR} from '../helpers/quick_open-helpers.js';
 import {openSettingsTab} from '../helpers/settings-helpers.js';
-import {ADD_SHORTCUT_LINK_TEXT, clickAddShortcutLink, clickShortcutCancelButton, clickShortcutConfirmButton, clickShortcutDeleteButton, clickShortcutResetButton, editShortcutListItem, selectKeyboardShortcutPreset, shortcutInputValues, shortcutsForAction, waitForEmptyShortcutInput} from '../helpers/settings-shortcuts-helpers.js';
+import {ADD_SHORTCUT_LINK_TEXT, clickAddShortcutLink, clickShortcutCancelButton, clickShortcutConfirmButton, clickShortcutDeleteButton, clickShortcutResetButton, CONSOLE_SHORTCUT_DISPLAY_TEXT, CONSOLE_SHORTCUT_INPUT_TEXT, CONTROL_1_CONTROL_2_SHORTCUT_DISPLAY_TEXT, CONTROL_1_CONTROL_2_SHORTCUT_INPUTS_TEXT, CONTROL_2_SHORTCUT_INPUT_TEXT, editShortcutListItem, selectKeyboardShortcutPreset, shortcutInputValues, shortcutsForAction, VS_CODE_PAUSE_SHORTCUTS, VS_CODE_SETTINGS_SHORTCUTS, VS_CODE_SHORTCUTS_QUICK_OPEN_TEXT, VS_CODE_SHORTCUTS_SHORTCUTS, waitForEmptyShortcutInput, waitForVSCodeShortcutPreset} from '../helpers/settings-shortcuts-helpers.js';
 
 describe('Shortcuts Settings tab', async () => {
   it('should update when the shortcuts preset is changed ', async () => {
     await openSettingsTab('Shortcuts');
     await selectKeyboardShortcutPreset('vsCode');
 
-    // wait for a shortcut that vsCode has but the default preset does not
-    await waitForElementWithTextContent('CtrlKCtrlS');
+    await waitForVSCodeShortcutPreset();
 
     const shortcutsShortcuts = await shortcutsForAction('Shortcuts');
     const settingsShortcuts = await shortcutsForAction('Settings');
     const pauseShortcuts = await shortcutsForAction('Pause script execution');
-    assert.deepStrictEqual(shortcutsShortcuts, ['CtrlKCtrlS']);
-    assert.deepStrictEqual(settingsShortcuts, ['Shift?', 'Ctrl,']);
-    assert.deepStrictEqual(pauseShortcuts, ['Ctrl\\', 'F5', 'ShiftF5']);
+    assert.deepStrictEqual(shortcutsShortcuts, VS_CODE_SHORTCUTS_SHORTCUTS);
+    assert.deepStrictEqual(settingsShortcuts, VS_CODE_SETTINGS_SHORTCUTS);
+    assert.deepStrictEqual(pauseShortcuts, VS_CODE_PAUSE_SHORTCUTS);
   });
 
   it('should apply new shortcuts when the preset is changed', async () => {
@@ -31,8 +30,7 @@ describe('Shortcuts Settings tab', async () => {
     await openSettingsTab('Shortcuts');
     await selectKeyboardShortcutPreset('vsCode');
 
-    // wait for a shortcut that vsCode has but the default preset does not
-    await waitForElementWithTextContent('CtrlKCtrlS');
+    await waitForVSCodeShortcutPreset();
 
     // close the settings dialog
     await frontend.keyboard.press('Escape');
@@ -45,7 +43,7 @@ describe('Shortcuts Settings tab', async () => {
     await frontend.keyboard.type('Shortcuts');
     const shortcutsItemText = await getSelectedItemText();
 
-    assert.strictEqual(shortcutsItemText, 'SettingsShortcutsCtrl + K Ctrl + S');
+    assert.strictEqual(shortcutsItemText, VS_CODE_SHORTCUTS_QUICK_OPEN_TEXT);
   });
 
   it('should allow users to open the shortcut editor and view the current shortcut', async () => {
@@ -55,7 +53,7 @@ describe('Shortcuts Settings tab', async () => {
     await editShortcutListItem('Show Console');
 
     const shortcutInputsText = await shortcutInputValues();
-    assert.deepStrictEqual(shortcutInputsText, ['Ctrl + `']);
+    assert.deepStrictEqual(shortcutInputsText, CONSOLE_SHORTCUT_INPUT_TEXT);
   });
 
   it('should allow users to open the shortcut editor and change and add shortcuts', async () => {
@@ -76,12 +74,12 @@ describe('Shortcuts Settings tab', async () => {
     await frontend.keyboard.up('Control');
 
     const shortcutInputsText = await shortcutInputValues();
-    assert.deepStrictEqual(shortcutInputsText, ['Ctrl + 1', 'Ctrl + 2']);
+    assert.deepStrictEqual(shortcutInputsText, CONTROL_1_CONTROL_2_SHORTCUT_INPUTS_TEXT);
     await clickShortcutConfirmButton();
     await waitForNoElementsWithTextContent(ADD_SHORTCUT_LINK_TEXT);
 
     const shortcuts = await shortcutsForAction('Show Console');
-    assert.deepStrictEqual(shortcuts, ['Ctrl1', 'Ctrl2']);
+    assert.deepStrictEqual(shortcuts, CONTROL_1_CONTROL_2_SHORTCUT_DISPLAY_TEXT);
   });
 
   it('should allow users to open the shortcut editor and delete and reset shortcuts', async () => {
@@ -102,7 +100,7 @@ describe('Shortcuts Settings tab', async () => {
     await frontend.keyboard.up('Control');
 
     const shortcutInputsText = await shortcutInputValues();
-    assert.deepStrictEqual(shortcutInputsText, ['Ctrl + 1', 'Ctrl + 2']);
+    assert.deepStrictEqual(shortcutInputsText, CONTROL_1_CONTROL_2_SHORTCUT_INPUTS_TEXT);
 
     await clickShortcutDeleteButton(0);
     let shortcutInputTextAfterDeletion;
@@ -110,17 +108,17 @@ describe('Shortcuts Settings tab', async () => {
       shortcutInputTextAfterDeletion = await shortcutInputValues();
       return shortcutInputTextAfterDeletion.length === 1;
     });
-    assert.deepStrictEqual(shortcutInputTextAfterDeletion, ['Ctrl + 2']);
+    assert.deepStrictEqual(shortcutInputTextAfterDeletion, CONTROL_2_SHORTCUT_INPUT_TEXT);
 
     await clickShortcutResetButton();
     const shortcutInputTextAfterReset = await shortcutInputValues();
-    assert.deepStrictEqual(shortcutInputTextAfterReset, ['Ctrl + `']);
+    assert.deepStrictEqual(shortcutInputTextAfterReset, CONSOLE_SHORTCUT_INPUT_TEXT);
 
     await clickShortcutConfirmButton();
     await waitForNoElementsWithTextContent(ADD_SHORTCUT_LINK_TEXT);
 
     const shortcuts = await shortcutsForAction('Show Console');
-    assert.deepStrictEqual(shortcuts, ['Ctrl`']);
+    assert.deepStrictEqual(shortcuts, CONSOLE_SHORTCUT_DISPLAY_TEXT);
   });
 
   it('should allow users to cancel an edit and discard their changes to shortcuts', async () => {
@@ -141,11 +139,11 @@ describe('Shortcuts Settings tab', async () => {
     await frontend.keyboard.up('Control');
 
     const shortcutInputsText = await shortcutInputValues();
-    assert.deepStrictEqual(shortcutInputsText, ['Ctrl + 1', 'Ctrl + 2']);
+    assert.deepStrictEqual(shortcutInputsText, CONTROL_1_CONTROL_2_SHORTCUT_INPUTS_TEXT);
     await clickShortcutCancelButton();
     await waitForNoElementsWithTextContent(ADD_SHORTCUT_LINK_TEXT);
 
     const shortcuts = await shortcutsForAction('Show Console');
-    assert.deepStrictEqual(shortcuts, ['Ctrl`']);
+    assert.deepStrictEqual(shortcuts, CONSOLE_SHORTCUT_DISPLAY_TEXT);
   });
 });

@@ -78,8 +78,8 @@ export class ObjectPropertiesSection extends UI.TreeOutline.TreeOutlineInShadow 
     }
 
     this.element._section = this;
-    this.registerRequiredCSS('object_ui/objectValue.css');
-    this.registerRequiredCSS('object_ui/objectPropertiesSection.css');
+    this.registerRequiredCSS('object_ui/objectValue.css', {enableLegacyPatching: true});
+    this.registerRequiredCSS('object_ui/objectPropertiesSection.css', {enableLegacyPatching: true});
     this.rootElement().childrenListElement.classList.add('source-code', 'object-properties-section');
   }
 
@@ -109,7 +109,8 @@ export class ObjectPropertiesSection extends UI.TreeOutline.TreeOutlineInShadow 
   static defaultObjectPropertiesSection(object, linkifier, skipProto, readOnly) {
     const titleElement = document.createElement('span');
     titleElement.classList.add('source-code');
-    const shadowRoot = UI.Utils.createShadowRootWithCoreStyles(titleElement, 'object_ui/objectValue.css');
+    const shadowRoot = UI.Utils.createShadowRootWithCoreStyles(
+        titleElement, {cssFile: 'object_ui/objectValue.css', enableLegacyPatching: true, delegatesFocus: undefined});
     const propertyValue =
         ObjectPropertiesSection.createPropertyValue(object, /* wasThrown */ false, /* showPreview */ true);
     shadowRoot.appendChild(propertyValue.element);
@@ -599,8 +600,8 @@ export class ObjectPropertiesSectionsTreeOutline extends UI.TreeOutline.TreeOutl
    */
   constructor(options) {
     super();
-    this.registerRequiredCSS('object_ui/objectValue.css');
-    this.registerRequiredCSS('object_ui/objectPropertiesSection.css');
+    this.registerRequiredCSS('object_ui/objectValue.css', {enableLegacyPatching: true});
+    this.registerRequiredCSS('object_ui/objectPropertiesSection.css', {enableLegacyPatching: true});
     this._editable = !(options && options.readOnly);
     this.contentElement.classList.add('source-code');
     this.contentElement.classList.add('object-properties-section');
@@ -1176,8 +1177,11 @@ export class ObjectPropertyTreeElement extends UI.TreeOutline.TreeElement {
       if (this.property.parentObject instanceof SDK.RemoteObject.LocalJSONObject) {
         const {value: {value}} = this.property;
         const propertyValue = typeof value === 'object' ? JSON.stringify(value, null, 2) : value;
-        const copyValueHandler = Host.InspectorFrontendHost.InspectorFrontendHostInstance.copyText.bind(
-            Host.InspectorFrontendHost.InspectorFrontendHostInstance, /** @type {string|undefined} */ (propertyValue));
+        const copyValueHandler = () => {
+          Host.userMetrics.actionTaken(Host.UserMetrics.Action.NetworkPanelCopyValue);
+          Host.InspectorFrontendHost.InspectorFrontendHostInstance.copyText(
+              /** @type {string|undefined} */ (propertyValue));
+        };
         contextMenu.clipboardSection().appendItem(ls`Copy value`, copyValueHandler);
       }
     }

@@ -139,12 +139,12 @@ export class ConsoleView extends UI.Widget.VBox {
   constructor() {
     super();
     this.setMinimumSize(0, 35);
-    this.registerRequiredCSS('console/consoleView.css');
-    this.registerRequiredCSS('object_ui/objectValue.css');
-    this.registerRequiredCSS('console/dirac-hacks.css');
-    this.registerRequiredCSS('console/dirac-codemirror.css');
-    this.registerRequiredCSS('console/dirac-theme.css');
-    this.registerRequiredCSS('console/dirac-prompt.css');
+    this.registerRequiredCSS('console/consoleView.css', {enableLegacyPatching: true});
+    this.registerRequiredCSS('object_ui/objectValue.css', {enableLegacyPatching: true});
+    this.registerRequiredCSS('console/dirac-hacks.css', {enableLegacyPatching: true});
+    this.registerRequiredCSS('console/dirac-codemirror.css', {enableLegacyPatching: true});
+    this.registerRequiredCSS('console/dirac-theme.css', {enableLegacyPatching: true});
+    this.registerRequiredCSS('console/dirac-prompt.css', {enableLegacyPatching: true});
     const diracAngel = Common.getDiracAngel();
     diracAngel.initConsole();
 

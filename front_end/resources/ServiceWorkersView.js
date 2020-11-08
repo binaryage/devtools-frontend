@@ -4,6 +4,7 @@
 
 import * as Common from '../common/common.js';
 import * as Components from '../components/components.js';
+import * as Host from '../host/host.js';
 import * as MobileThrottling from '../mobile_throttling/mobile_throttling.js';
 import * as Network from '../network/network.js';
 import * as SDK from '../sdk/sdk.js';
@@ -23,7 +24,7 @@ export const setThrottleDisabledForDebugging = enable => {
 export class ServiceWorkersView extends UI.Widget.VBox {
   constructor() {
     super(true);
-    this.registerRequiredCSS('resources/serviceWorkersView.css');
+    this.registerRequiredCSS('resources/serviceWorkersView.css', {enableLegacyPatching: true});
 
     this._currentWorkersView = new UI.ReportView.ReportView(Common.UIString.UIString('Service Workers'));
     this._currentWorkersView.setBodyScrollable(false);
@@ -85,11 +86,24 @@ export class ServiceWorkersView extends UI.Widget.VBox {
     const drawerChangeHandler = event => {
       // @ts-ignore: No support for custom event listener
       const isDrawerOpen = event.detail && event.detail.isDrawerOpen;
-      if (this._manager && !isDrawerOpen && this._manager.serviceWorkerNetworkRequestsPanelOpen) {
-        const networkLocation = UI.ViewManager.ViewManager.instance().locationNameForViewId('network');
-        UI.ViewManager.ViewManager.instance().showViewInLocation('network', networkLocation, false);
-        Network.NetworkPanel.NetworkPanel.revealAndFilter([]);
-        this._manager.serviceWorkerNetworkRequestsPanelOpen = false;
+      if (this._manager && !isDrawerOpen) {
+        const {serviceWorkerNetworkRequestsPanelStatus: {isOpen, openedAt}} = this._manager;
+        if (isOpen) {
+          const networkLocation = UI.ViewManager.ViewManager.instance().locationNameForViewId('network');
+          UI.ViewManager.ViewManager.instance().showViewInLocation('network', networkLocation, false);
+          Network.NetworkPanel.NetworkPanel.revealAndFilter([]);
+
+          const currentTime = Date.now();
+          const timeDifference = currentTime - openedAt;
+          if (timeDifference < 2000) {
+            Host.userMetrics.actionTaken(Host.UserMetrics.Action.ServiceWorkerNetworkRequestClosedQuickly);
+          }
+
+          this._manager.serviceWorkerNetworkRequestsPanelStatus = {
+            isOpen: false,
+            openedAt: 0,
+          };
+        }
       }
     };
     document.body.addEventListener(UI.InspectorView.Events.DrawerChange, drawerChangeHandler);
@@ -625,7 +639,11 @@ export class Section {
           lastRequest, Network.NetworkItemView.Tabs.Timing, {clearFilter: false});
     }
 
-    this._manager.serviceWorkerNetworkRequestsPanelOpen = true;
+    this._manager.serviceWorkerNetworkRequestsPanelStatus = {
+      isOpen: true,
+      openedAt: Date.now(),
+    };
+    Host.userMetrics.actionTaken(Host.UserMetrics.Action.ServiceWorkerNetworkRequestClicked);
   }
 
   /**
@@ -716,8 +734,9 @@ export class Section {
    * @return {!Element}
    */
   _wrapWidget(container) {
-    const shadowRoot = UI.Utils.createShadowRootWithCoreStyles(container);
-    UI.Utils.appendStyle(shadowRoot, 'resources/serviceWorkersView.css');
+    const shadowRoot = UI.Utils.createShadowRootWithCoreStyles(
+        container, {cssFile: undefined, enableLegacyPatching: true, delegatesFocus: undefined});
+    UI.Utils.appendStyle(shadowRoot, 'resources/serviceWorkersView.css', {enableLegacyPatching: true});
     const contentElement = document.createElement('div');
     shadowRoot.appendChild(contentElement);
     return contentElement;

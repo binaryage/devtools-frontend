@@ -23,6 +23,7 @@ devtools_module("main") {
     "../platform:bundle",
     "../protocol_client:bundle",
     "../sdk:bundle",
+    "../snippets:bundle",
     "../theme_support:bundle",
     "../ui:bundle",
     "../workspace:bundle",
@@ -30,7 +31,7 @@ devtools_module("main") {
 }
 
 devtools_entrypoint("bundle") {
-  entrypoint = "main.js"
+  entrypoint = "main.ts"
 
   deps = [ ":main" ]
 }

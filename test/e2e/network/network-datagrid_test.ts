@@ -4,7 +4,7 @@
 
 import {assert} from 'chai';
 
-import {click, getBrowserAndPages, waitFor} from '../../shared/helper.js';
+import {click, getBrowserAndPages, step, waitFor, waitForAria, waitForFunction} from '../../shared/helper.js';
 import {describe, it} from '../../shared/mocha-extensions.js';
 import {navigateToNetworkTab, waitForSomeRequestsToAppear} from '../helpers/network-helpers.js';
 
@@ -21,38 +21,52 @@ describe('The Network Tab', async () => {
     assert.strictEqual(checked, true, 'The disable cache checkbox should be checked');
   });
 
-  // Flaky test
-  it.skip('[crbug.com/1066813] shows Last-Modified', async () => {
-    const {frontend} = getBrowserAndPages();
+  it('shows Last-Modified', async () => {
+    const {target, frontend} = getBrowserAndPages();
     await navigateToNetworkTab('last-modified.html');
 
-    // Open the contextmenu for all network column
-    await click('.name-column', {clickOptions: {button: 'right'}});
+    // Reload to populate network request table
+    await target.reload({waitUntil: 'networkidle0'});
 
-    // Enable the Last-Modified column in the network datagrid
-    await click('[aria-label="Response Headers"]');
-    await click('[aria-label="Last-Modified, unchecked"]');
-
-    // Wait for the column to show up and populate its values
-    await waitForSomeRequestsToAppear(3);
-
-    const lastModifiedColumnValues = await frontend.evaluate(() => {
-      return Array.from(document.querySelectorAll('.last-modified-column')).map(message => message.textContent);
+    await step('Wait for the column to show up and populate its values', async () => {
+      await waitForSomeRequestsToAppear(2);
     });
 
-    assert.deepEqual(lastModifiedColumnValues, [
-      'Last-Modified',
-      '',
-      'Sun, 26 Sep 2010 22:04:35 GMT',
-    ]);
+    await step('Open the contextmenu for all network column', async () => {
+      await click('.name-column', {clickOptions: {button: 'right'}});
+    });
+
+    await step('Click "Response Headers" submenu', async () => {
+      const responseHeaders = await waitForAria('Response Headers');
+      await click(responseHeaders);
+    });
+
+    await step('Enable the Last-Modified column in the network datagrid', async () => {
+      const lastModified = await waitForAria('Last-Modified, unchecked');
+      await click(lastModified);
+    });
+
+    await step('Wait for the "Last-Modified" column to have the expected values', async () => {
+      const expectedValues = JSON.stringify(['Last-Modified', '', 'Sun, 26 Sep 2010 22:04:35 GMT']);
+      await waitForFunction(async () => {
+        const lastModifiedColumnValues = await frontend.$$eval(
+            'pierce/.last-modified-column',
+            cells => cells.map(element => element.textContent),
+        );
+        return JSON.stringify(lastModifiedColumnValues) === expectedValues;
+      });
+    });
   });
 
-  // Flaky test
-  it.skip('[crbug.com/1066813] shows the HTML response including cyrillic characters with utf-8 encoding', async () => {
+  it('shows the HTML response including cyrillic characters with utf-8 encoding', async () => {
+    const {target} = getBrowserAndPages();
     await navigateToNetworkTab('utf-8.rawresponse');
 
+    // Reload to populate network request table
+    await target.reload({waitUntil: 'networkidle0'});
+
     // Wait for the column to show up and populate its values
-    await waitForSomeRequestsToAppear(2);
+    await waitForSomeRequestsToAppear(1);
 
     // Open the HTML file that was loaded
     await click('td.name-column');
@@ -71,18 +85,17 @@ describe('The Network Tab', async () => {
         '1<html><body>The following word is written using cyrillic letters and should look like "SUCCESS": SU\u0421\u0421\u0415SS.</body></html>');
   });
 
-  // Flaky test
-  it.skip('[crbug.com/1066813] shows the correct MIME type when resources came from HTTP cache', async () => {
+  it('shows the correct MIME type when resources came from HTTP cache', async () => {
     const {target, frontend} = getBrowserAndPages();
 
     await navigateToNetworkTab('resources-from-cache.html');
 
-    // Wait for the column to show up and populate its values
-    await waitForSomeRequestsToAppear(3);
-
     // Reload the page without a cache, to force a fresh load of the network resources
     await click('[aria-label="Disable cache"]');
-    await target.reload({waitUntil: 'networkidle2'});
+    await target.reload({waitUntil: 'networkidle0'});
+
+    // Wait for the column to show up and populate its values
+    await waitForSomeRequestsToAppear(2);
 
     // Get the size of the first two network request responses (excluding header and favicon.ico).
     const getNetworkRequestSize = () => frontend.evaluate(() => {
@@ -106,7 +119,9 @@ describe('The Network Tab', async () => {
 
     // Allow resources from the cache again and reload the page to load from cache
     await click('[aria-label="Disable cache"]');
-    await target.reload({waitUntil: 'networkidle2'});
+    await target.reload({waitUntil: 'networkidle0'});
+    // Wait for the column to show up and populate its values
+    await waitForSomeRequestsToAppear(2);
 
     assert.deepEqual(await getNetworkRequestSize(), [
       `${formatByteSize(338)}${formatByteSize(219)}`,

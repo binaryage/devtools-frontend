@@ -6662,6 +6662,7 @@ declare namespace Protocol {
       MethodDisallowedByPreflightResponse = 'MethodDisallowedByPreflightResponse',
       HeaderDisallowedByPreflightResponse = 'HeaderDisallowedByPreflightResponse',
       RedirectContainsCredentials = 'RedirectContainsCredentials',
+      InsecurePrivateNetwork = 'InsecurePrivateNetwork',
     }
 
     export interface CorsErrorStatus {
@@ -8334,6 +8335,35 @@ declare namespace Protocol {
     }
 
     /**
+     * Configuration data for the highlighting of Flex container elements.
+     */
+    export interface FlexContainerHighlightConfig {
+      /**
+       * The style of the container border
+       */
+      containerBorder?: LineStyle;
+    }
+
+    export enum LineStylePattern {
+      Dashed = 'dashed',
+      Dotted = 'dotted',
+    }
+
+    /**
+     * Style information for drawing a line.
+     */
+    export interface LineStyle {
+      /**
+       * The color of the line (default: transparent)
+       */
+      color?: DOM.RGBA;
+      /**
+       * The line pattern (default: solid)
+       */
+      pattern?: LineStylePattern;
+    }
+
+    /**
      * Configuration data for the highlighting of page elements.
      */
     export interface HighlightConfig {
@@ -8397,6 +8427,10 @@ declare namespace Protocol {
        * The grid layout highlight configuration (default: all transparent).
        */
       gridHighlightConfig?: GridHighlightConfig;
+      /**
+       * The flex container highlight configuration (default: all transparent).
+       */
+      flexContainerHighlightConfig?: FlexContainerHighlightConfig;
     }
 
     export enum ColorFormat {
@@ -8758,6 +8792,13 @@ declare namespace Protocol {
       NotIsolatedFeatureDisabled = 'NotIsolatedFeatureDisabled',
     }
 
+    export enum GatedAPIFeatures {
+      SharedArrayBuffers = 'SharedArrayBuffers',
+      SharedArrayBuffersTransferAllowed = 'SharedArrayBuffersTransferAllowed',
+      PerformanceMeasureMemory = 'PerformanceMeasureMemory',
+      PerformanceProfile = 'PerformanceProfile',
+    }
+
     /**
      * Information about the Frame on the page.
      */
@@ -8817,6 +8858,10 @@ declare namespace Protocol {
        * Indicates whether this is a cross origin isolated context.
        */
       crossOriginIsolatedContextType: CrossOriginIsolatedContextType;
+      /**
+       * Indicated which gated APIs / features are available.
+       */
+      gatedAPIFeatures: GatedAPIFeatures[];
     }
 
     /**
@@ -11506,6 +11551,17 @@ declare namespace Protocol {
       Gzip = 'gzip',
     }
 
+    /**
+     * Details exposed when memory request explicitly declared.
+     * Keep consistent with memory_dump_request_args.h and
+     * memory_instrumentation.mojom
+     */
+    export enum MemoryDumpLevelOfDetail {
+      Background = 'background',
+      Light = 'light',
+      Detailed = 'detailed',
+    }
+
     export interface GetCategoriesResponse extends ProtocolResponseWithError {
       /**
        * A list of supported tracing categories.
@@ -11525,6 +11581,10 @@ declare namespace Protocol {
        * Enables more deterministic results by forcing garbage collection
        */
       deterministic?: boolean;
+      /**
+       * Specifies level of details in memory dump. Defaults to "detailed".
+       */
+      levelOfDetail?: MemoryDumpLevelOfDetail;
     }
 
     export interface RequestMemoryDumpResponse extends ProtocolResponseWithError {

@@ -69,7 +69,7 @@ export class ApplicationPanelSidebar extends UI.Widget.VBox {
 
     this._sidebarTree = new UI.TreeOutline.TreeOutlineInShadow();
     this._sidebarTree.element.classList.add('resources-sidebar');
-    this._sidebarTree.registerRequiredCSS('resources/resourcesSidebar.css');
+    this._sidebarTree.registerRequiredCSS('resources/resourcesSidebar.css', {enableLegacyPatching: true});
     this._sidebarTree.element.classList.add('filter-all');
     // Listener needs to have been set up before the elements are added
     this._sidebarTree.addEventListener(UI.TreeOutline.Events.ElementAttached, this._treeElementAdded, this);
@@ -1252,8 +1252,8 @@ export class ClearStorageTreeElement extends BaseStorageTreeElement {
    * @param {!UI.Panel.PanelWithSidebar} storagePanel
    */
   constructor(storagePanel) {
-    super(storagePanel, Common.UIString.UIString('Clear storage'), false);
-    const icon = UI.Icon.Icon.create('mediumicon-clear-storage', 'resource-tree-item');
+    super(storagePanel, Common.UIString.UIString('Storage'), false);
+    const icon = UI.Icon.Icon.create('mediumicon-database', 'resource-tree-item');
     this.setLeadingIcons([icon]);
   }
 

@@ -426,8 +426,8 @@ export class SecurityPanelSidebarTree extends UI.TreeOutline.TreeOutlineInShadow
    */
   constructor(mainViewElement, showOriginInPanel) {
     super();
-    this.registerRequiredCSS('security/sidebar.css');
-    this.registerRequiredCSS('security/lockIcon.css');
+    this.registerRequiredCSS('security/sidebar.css', {enableLegacyPatching: true});
+    this.registerRequiredCSS('security/lockIcon.css', {enableLegacyPatching: true});
     this.appendChild(mainViewElement);
 
     this._showOriginInPanel = showOriginInPanel;
@@ -654,8 +654,8 @@ export class SecurityMainView extends UI.Widget.VBox {
    */
   constructor(panel) {
     super(true);
-    this.registerRequiredCSS('security/mainView.css');
-    this.registerRequiredCSS('security/lockIcon.css');
+    this.registerRequiredCSS('security/mainView.css', {enableLegacyPatching: true});
+    this.registerRequiredCSS('security/lockIcon.css', {enableLegacyPatching: true});
     this.setMinimumSize(200, 100);
 
     this.contentElement.classList.add('security-main-view');
@@ -1190,8 +1190,8 @@ export class SecurityOriginView extends UI.Widget.VBox {
     this.setMinimumSize(200, 100);
 
     this.element.classList.add('security-origin-view');
-    this.registerRequiredCSS('security/originView.css');
-    this.registerRequiredCSS('security/lockIcon.css');
+    this.registerRequiredCSS('security/originView.css', {enableLegacyPatching: true});
+    this.registerRequiredCSS('security/lockIcon.css', {enableLegacyPatching: true});
 
     const titleSection = this.element.createChild('div', 'title-section');
     const titleDiv = titleSection.createChild('div', 'title-section-header');
@@ -1205,18 +1205,16 @@ export class SecurityOriginView extends UI.Widget.VBox {
     originDisplay.appendChild(SecurityPanel.createHighlightedUrl(origin, originState.securityState));
 
     const originNetworkDiv = titleSection.createChild('div', 'view-network-button');
-    const originNetworkLink = originNetworkDiv.createChild('span', 'devtools-link origin-button');
-    originNetworkLink.tabIndex = 0;
-    originNetworkLink.textContent = ls`View requests in Network Panel`;
-    originNetworkLink.addEventListener('click', e => {
-      e.consume();
+    const originNetworkButton = UI.UIUtils.createTextButton(ls`View requests in Network Panel`, event => {
+      event.consume();
       const parsedURL = new Common.ParsedURL.ParsedURL(origin);
       Network.NetworkPanel.NetworkPanel.revealAndFilter([
         {filterType: Network.NetworkLogView.FilterType.Domain, filterValue: parsedURL.host},
         {filterType: Network.NetworkLogView.FilterType.Scheme, filterValue: parsedURL.scheme}
       ]);
     });
-    UI.ARIAUtils.markAsLink(originNetworkLink);
+    originNetworkDiv.appendChild(originNetworkButton);
+    UI.ARIAUtils.markAsLink(originNetworkButton);
 
     if (originState.securityDetails) {
       const connectionSection = this.element.createChild('div', 'origin-view-section');

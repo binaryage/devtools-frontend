@@ -43,7 +43,7 @@ export class ImageView extends UI.View.SimpleView {
    */
   constructor(mimeType, contentProvider) {
     super(Common.UIString.UIString('Image'));
-    this.registerRequiredCSS('source_frame/imageView.css');
+    this.registerRequiredCSS('source_frame/imageView.css', {enableLegacyPatching: true});
     this.element.tabIndex = -1;
     this.element.classList.add('image-view');
     this._url = contentProvider.contentURL();
@@ -75,6 +75,7 @@ export class ImageView extends UI.View.SimpleView {
    * @return {!Promise<!Array<!UI.Toolbar.ToolbarItem>>}
    */
   async toolbarItems() {
+    await this._updateContentIfNeeded();
     return [
       this._sizeLabel, new UI.Toolbar.ToolbarSeparator(), this._dimensionsLabel, new UI.Toolbar.ToolbarSeparator(),
       this._mimeTypeLabel

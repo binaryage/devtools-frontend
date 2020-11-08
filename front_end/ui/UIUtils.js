@@ -351,6 +351,7 @@ export const StyleValueDelimiters = ' \xA0\t\n"\':;,/()';
  */
 function _valueModificationDirection(event) {
   let direction = null;
+  // TODO(crbug.com/1145518) Remove usage of MouseWheelEvent.
   if (event.type === 'mousewheel') {
     // When shift is pressed while spinning mousewheel, delta comes as wheelDeltaX.
     if (event.wheelDeltaY > 0 || event.wheelDeltaX > 0) {
@@ -1203,7 +1204,7 @@ export function initializeUIUtils(document, themeSetting) {
   ThemeSupport.ThemeSupport.instance().applyTheme(document);
 
   const body = /** @type {!Element} */ (document.body);
-  appendStyle(body, 'ui/inspectorStyle.css');
+  appendStyle(body, 'ui/inspectorStyle.css', {enableLegacyPatching: true});
   GlassPane.setContainer(/** @type {!Element} */ (document.body));
 }
 
@@ -1242,12 +1243,13 @@ export const createTextChildren = (element, ...childrenText) => {
 
 /**
  * @param {string} text
- * @param {function(!Event):*=} clickHandler
+ * @param {function(!Event):*=} eventHandler
  * @param {string=} className
  * @param {boolean=} primary
+ * @param {string=} alternativeEvent
  * @return {!HTMLButtonElement}
  */
-export function createTextButton(text, clickHandler, className, primary) {
+export function createTextButton(text, eventHandler, className, primary, alternativeEvent) {
   const element = /** @type {!HTMLButtonElement} */ (document.createElement('button'));
   if (className) {
     element.className = className;
@@ -1257,12 +1259,13 @@ export function createTextButton(text, clickHandler, className, primary) {
   if (primary) {
     element.classList.add('primary-button');
   }
-  if (clickHandler) {
-    element.addEventListener('click', clickHandler, false);
+  if (eventHandler) {
+    element.addEventListener(alternativeEvent || 'click', eventHandler);
   }
   element.type = 'button';
   return element;
 }
+
 
 /**
  * @param {string=} className
@@ -1353,7 +1356,8 @@ export class CheckboxLabel extends HTMLSpanElement {
     this.textElement;
     CheckboxLabel._lastId = (CheckboxLabel._lastId || 0) + 1;
     const id = 'ui-checkbox-label' + CheckboxLabel._lastId;
-    this._shadowRoot = createShadowRootWithCoreStyles(this, 'ui/checkboxTextLabel.css');
+    this._shadowRoot = createShadowRootWithCoreStyles(
+        this, {cssFile: 'ui/checkboxTextLabel.css', enableLegacyPatching: true, delegatesFocus: undefined});
     this.checkboxElement = /** @type {!HTMLInputElement} */ (this._shadowRoot.createChild('input'));
     this.checkboxElement.type = 'checkbox';
     this.checkboxElement.setAttribute('id', id);
@@ -1417,7 +1421,11 @@ export class CheckboxLabel extends HTMLSpanElement {
 export class DevToolsIconLabel extends HTMLSpanElement {
   constructor() {
     super();
-    const root = createShadowRootWithCoreStyles(this);
+    const root = createShadowRootWithCoreStyles(this, {
+      enableLegacyPatching: true,
+      cssFile: undefined,
+      delegatesFocus: undefined,
+    });
     this._iconElement = Icon.create();
     this._iconElement.style.setProperty('margin-right', '4px');
     root.appendChild(this._iconElement);
@@ -1445,7 +1453,8 @@ export class DevToolsRadioButton extends HTMLSpanElement {
     this.radioElement.id = id;
     this.radioElement.type = 'radio';
     this.labelElement.htmlFor = id;
-    const root = createShadowRootWithCoreStyles(this, 'ui/radioButton.css');
+    const root = createShadowRootWithCoreStyles(
+        this, {cssFile: 'ui/radioButton.css', enableLegacyPatching: true, delegatesFocus: undefined});
     root.createChild('slot');
     this.addEventListener('click', radioClickHandler, false);
   }
@@ -1471,7 +1480,8 @@ registerCustomElement('span', 'dt-icon-label', DevToolsIconLabel);
 class DevToolsSlider extends HTMLSpanElement {
   constructor() {
     super();
-    const root = createShadowRootWithCoreStyles(this, 'ui/slider.css');
+    const root = createShadowRootWithCoreStyles(
+        this, {cssFile: 'ui/slider.css', enableLegacyPatching: true, delegatesFocus: undefined});
     this.sliderElement = document.createElement('input');
     this.sliderElement.classList.add('dt-range-input');
     this.sliderElement.type = 'range';
@@ -1499,7 +1509,8 @@ registerCustomElement('span', 'dt-slider', DevToolsSlider);
 export class DevToolsSmallBubble extends HTMLSpanElement {
   constructor() {
     super();
-    const root = createShadowRootWithCoreStyles(this, 'ui/smallBubble.css');
+    const root = createShadowRootWithCoreStyles(
+        this, {cssFile: 'ui/smallBubble.css', enableLegacyPatching: true, delegatesFocus: undefined});
     this._textElement = root.createChild('div');
     this._textElement.className = 'info';
     this._textElement.createChild('slot');
@@ -1519,7 +1530,8 @@ registerCustomElement('span', 'dt-small-bubble', DevToolsSmallBubble);
 export class DevToolsCloseButton extends HTMLDivElement {
   constructor() {
     super();
-    const root = createShadowRootWithCoreStyles(this, 'ui/closeButton.css');
+    const root = createShadowRootWithCoreStyles(
+        this, {cssFile: 'ui/closeButton.css', enableLegacyPatching: true, delegatesFocus: undefined});
     this._buttonElement = root.createChild('div', 'close-button');
     ARIAUtils.setAccessibleName(this._buttonElement, ls`Close`);
     ARIAUtils.markAsButton(this._buttonElement);
@@ -1779,7 +1791,7 @@ export function addReferrerToURLIfNecessary(url) {
 
 /**
  * @param {string} url
- * @return {!Promise<?Image>}
+ * @return {!Promise<?HTMLImageElement>}
  */
 export function loadImage(url) {
   return new Promise(fulfill => {
@@ -1792,7 +1804,7 @@ export function loadImage(url) {
 
 /**
  * @param {?string} data
- * @return {!Promise<?Image>}
+ * @return {!Promise<?HTMLImageElement>}
  */
 export function loadImageFromData(data) {
   return data ? loadImage('data:image/jpg;base64,' + data) : Promise.resolve(null);
@@ -1800,10 +1812,10 @@ export function loadImageFromData(data) {
 
 /**
  * @param {function(!File):*} callback
- * @return {!Node}
+ * @return {!HTMLInputElement}
  */
 export function createFileSelectorElement(callback) {
-  const fileSelectorElement = createElement('input');
+  const fileSelectorElement = /** @type {!HTMLInputElement} */ (createElement('input'));
   fileSelectorElement.type = 'file';
   fileSelectorElement.style.display = 'none';
   fileSelectorElement.setAttribute('tabindex', -1);
@@ -1830,7 +1842,9 @@ export class MessageDialog {
     const dialog = new Dialog();
     dialog.setSizeBehavior(SizeBehavior.MeasureContent);
     dialog.setDimmed(true);
-    const shadowRoot = createShadowRootWithCoreStyles(dialog.contentElement, 'ui/confirmDialog.css');
+    const shadowRoot = createShadowRootWithCoreStyles(
+        dialog.contentElement,
+        {cssFile: 'ui/confirmDialog.css', enableLegacyPatching: true, delegatesFocus: undefined});
     const content = shadowRoot.createChild('div', 'widget');
     await new Promise(resolve => {
       const okButton = createTextButton(Common.UIString.UIString('OK'), resolve, '', true);
@@ -1858,7 +1872,9 @@ export class ConfirmDialog {
     dialog.setSizeBehavior(SizeBehavior.MeasureContent);
     dialog.setDimmed(true);
     ARIAUtils.setAccessibleName(dialog.contentElement, message);
-    const shadowRoot = createShadowRootWithCoreStyles(dialog.contentElement, 'ui/confirmDialog.css');
+    const shadowRoot = createShadowRootWithCoreStyles(
+        dialog.contentElement,
+        {cssFile: 'ui/confirmDialog.css', enableLegacyPatching: true, delegatesFocus: undefined});
     const content = shadowRoot.createChild('div', 'widget');
     content.createChild('div', 'message').createChild('span').textContent = message;
     const buttonsBar = content.createChild('div', 'button');
@@ -1885,7 +1901,8 @@ export class ConfirmDialog {
  */
 export function createInlineButton(toolbarButton) {
   const element = createElement('span');
-  const shadowRoot = createShadowRootWithCoreStyles(element, 'ui/inlineButton.css');
+  const shadowRoot = createShadowRootWithCoreStyles(
+      element, {cssFile: 'ui/inlineButton.css', enableLegacyPatching: true, delegatesFocus: undefined});
   element.classList.add('inline-button');
   const toolbar = new Toolbar('');
   toolbar.appendToolbarItem(toolbarButton);

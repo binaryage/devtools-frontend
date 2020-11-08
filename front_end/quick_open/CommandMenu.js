@@ -11,14 +11,25 @@ import * as UI from '../ui/ui.js';
 import {FilteredListWidget, Provider} from './FilteredListWidget.js';
 import {QuickOpenImpl} from './QuickOpen.js';
 
+/** @type {!CommandMenu} */
+let commandMenuInstance;
+
 /**
  * @unrestricted
  */
 export class CommandMenu {
+  /** @private */
   constructor() {
     /** @type {!Array<!Command>} */
     this._commands = [];
     this._loadCommands();
+  }
+
+  static instance() {
+    if (!commandMenuInstance) {
+      commandMenuInstance = new CommandMenu();
+    }
+    return commandMenuInstance;
   }
 
   /**
@@ -107,16 +118,15 @@ export class CommandMenu {
    * @return {!Command}
    */
   static createRevealViewCommand(options) {
-    const {extension, category, userActionCode} = options;
-    const viewId = extension.descriptor()['id'];
+    const {title, tags, category, userActionCode, id} = options;
 
     return CommandMenu.createCommand({
       category,
-      keys: extension.descriptor()['tags'] || '',
-      title: Common.UIString.UIString('Show %s', extension.title()),
+      keys: tags || '',
+      title: Common.UIString.UIString('Show %s', title),
       shortcut: '',
       executeHandler: UI.ViewManager.ViewManager.instance().showView.bind(
-          UI.ViewManager.ViewManager.instance(), viewId, /* userGesture */ true),
+          UI.ViewManager.ViewManager.instance(), id, /* userGesture */ true),
       userActionCode,
       availableHandler: undefined
     });
@@ -131,15 +141,22 @@ export class CommandMenu {
         locations.set(name, category);
       }
     });
+    // TODO(crbug.com/1134103): Remove this call when all views are migrated
     const viewExtensions = Root.Runtime.Runtime.instance().extensions('view');
     for (const extension of viewExtensions) {
       const category = locations.get(extension.descriptor()['location']);
       if (!category) {
         continue;
       }
-
+      const extensionDescriptor = extension.descriptor();
       /** @type {!RevealViewCommandOptions} */
-      const options = {extension, category: ls(category), userActionCode: undefined};
+      const options = {
+        id: extensionDescriptor.id,
+        title: extensionDescriptor.title,
+        tags: extensionDescriptor.tags,
+        category: ls(category),
+        userActionCode: undefined
+      };
       this._commands.push(CommandMenu.createRevealViewCommand(options));
     }
 
@@ -154,7 +171,32 @@ export class CommandMenu {
         this._commands.push(CommandMenu.createSettingCommand(extension, ls(pair['title']), pair['value']));
       }
     }
+    this._loadCommandsFromPreRegisteredExtensions(locations);
   }
+
+  /**
+   * @param {!Map<string,string>} locations
+   */
+  _loadCommandsFromPreRegisteredExtensions(locations) {
+    const views = UI.ViewManager.getRegisteredViewExtensions();
+    for (const view of views) {
+      const category = locations.get(view.location());
+      if (!category) {
+        continue;
+      }
+
+      /** @type {!RevealViewCommandOptions} */
+      const options = {
+        title: view.title(),
+        tags: view.tags(),
+        category: ls(category),
+        userActionCode: undefined,
+        id: view.viewId()
+      };
+      this._commands.push(CommandMenu.createRevealViewCommand(options));
+    }
+  }
+
 
   /**
    * @return {!Array.<!Command>}
@@ -175,7 +217,9 @@ export let ActionCommandOptions;
 
 /**
  * @typedef {{
- *   extension: !Root.Runtime.Extension,
+ *   id: string,
+ *   title: ?string,
+ *   tags: ?string,
  *   category: string,
  *   userActionCode: (!Host.UserMetrics.Action|undefined)
  * }}
@@ -208,7 +252,7 @@ export class CommandMenuProvider extends Provider {
    * @override
    */
   attach() {
-    const allCommands = commandMenu.commands();
+    const allCommands = CommandMenu.instance().commands();
 
     // Populate allowlisted actions.
     const actions = UI.ActionRegistry.ActionRegistry.instance().availableActions();
@@ -410,6 +454,3 @@ export class ShowActionDelegate {
     return true;
   }
 }
-
-/** @type {!CommandMenu} */
-export const commandMenu = new CommandMenu();

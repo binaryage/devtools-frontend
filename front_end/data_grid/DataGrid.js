@@ -60,7 +60,7 @@ export class DataGridImpl extends Common.ObjectWrapper.ObjectWrapper {
     const {displayName, columns: columnsArray, editCallback, deleteCallback, refreshCallback} = dataGridParameters;
     this.element = document.createElement('div');
     this.element.classList.add('data-grid');
-    UI.Utils.appendStyle(this.element, 'data_grid/dataGrid.css');
+    UI.Utils.appendStyle(this.element, 'data_grid/dataGrid.css', {enableLegacyPatching: true});
     this.element.tabIndex = 0;
     this.element.addEventListener('keydown', this._keyDown.bind(this), false);
     this.element.addEventListener('contextmenu', this._contextMenu.bind(this), true);
@@ -1032,28 +1032,9 @@ export class DataGridImpl extends Common.ObjectWrapper.ObjectWrapper {
   }
 
   /**
-   * @param {!Object.<string, boolean>} columnsVisibility
-   */
-  setColumnsVisiblity(columnsVisibility) {
-    this.visibleColumnsArray = [];
-    for (let i = 0; i < this._columnsArray.length; ++i) {
-      const column = this._columnsArray[i];
-      if (columnsVisibility[column.id]) {
-        this.visibleColumnsArray.push(column);
-      }
-    }
-    this._refreshHeader();
-    this._applyColumnWeights();
-    const nodes = this._enumerateChildren(this.rootNode(), [], -1);
-    for (let i = 0; i < nodes.length; ++i) {
-      nodes[i].refresh();
-    }
-  }
-
-  /**
    * @param {!Set<string>} columnsVisibility
    */
-  setColumnsVisiblitySet(columnsVisibility) {
+  setColumnsVisiblity(columnsVisibility) {
     this.visibleColumnsArray = [];
     for (const column of this._columnsArray) {
       if (columnsVisibility.has(column.id)) {
@@ -1558,7 +1539,7 @@ export class DataGridImpl extends Common.ObjectWrapper.ObjectWrapper {
     // Constrain the dragpoint to be within the space made up by the
     // column directly to the left and the column directly to the right.
     let leftCellIndex = elementToIndexMap.get(resizer);
-    if (!leftCellIndex) {
+    if (leftCellIndex === undefined) {
       return;
     }
     let rightCellIndex = leftCellIndex + 1;

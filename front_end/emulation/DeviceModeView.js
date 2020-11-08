@@ -27,7 +27,7 @@ export class DeviceModeView extends UI.Widget.VBox {
 
     this.setMinimumSize(150, 150);
     this.element.classList.add('device-mode-view');
-    this.registerRequiredCSS('emulation/deviceModeView.css');
+    this.registerRequiredCSS('emulation/deviceModeView.css', {enableLegacyPatching: true});
     UI.Tooltip.Tooltip.addNativeOverrideContainer(this.contentElement);
 
     this._model = DeviceModeModel.instance();
@@ -289,11 +289,14 @@ export class DeviceModeView extends UI.Widget.VBox {
       this._cachedCssVisiblePageRect = cssVisiblePageRect;
     }
 
-    const outlineRect = this._model.outlineRect().scale(1 / zoomFactor);
-    if (!this._cachedOutlineRect || !outlineRect.isEqual(this._cachedOutlineRect)) {
-      applyRect(this._outlineImage, outlineRect);
-      callDoResize = true;
-      this._cachedOutlineRect = outlineRect;
+    const outlineRectFromModel = this._model.outlineRect();
+    if (outlineRectFromModel) {
+      const outlineRect = outlineRectFromModel.scale(1 / zoomFactor);
+      if (!this._cachedOutlineRect || !outlineRect.isEqual(this._cachedOutlineRect)) {
+        applyRect(this._outlineImage, outlineRect);
+        callDoResize = true;
+        this._cachedOutlineRect = outlineRect;
+      }
     }
     this._contentClip.classList.toggle('device-mode-outline-visible', !!this._model.outlineImage());
 
@@ -409,12 +412,9 @@ export class DeviceModeView extends UI.Widget.VBox {
     const rect = this._contentArea.getBoundingClientRect();
     const availableSize =
         new UI.Geometry.Size(Math.max(rect.width * zoomFactor, 1), Math.max(rect.height * zoomFactor, 1));
-    if (!this._handleHeight || !this._handleWidth) {
-      return;
-    }
     const preferredSize = new UI.Geometry.Size(
-        Math.max((rect.width - 2 * this._handleWidth) * zoomFactor, 1),
-        Math.max((rect.height - this._handleHeight) * zoomFactor, 1));
+        Math.max((rect.width - 2 * (this._handleWidth || 0)) * zoomFactor, 1),
+        Math.max((rect.height - (this._handleHeight || 0)) * zoomFactor, 1));
     this._model.setAvailableSize(availableSize, preferredSize);
   }
 
@@ -474,7 +474,11 @@ export class DeviceModeView extends UI.Widget.VBox {
     pageImage.src = 'data:image/png;base64,' + screenshot;
     pageImage.onload = async () => {
       const scale = pageImage.naturalWidth / this._model.screenRect().width;
-      const outlineRect = this._model.outlineRect().scale(scale);
+      const outlineRectFromModel = this._model.outlineRect();
+      if (!outlineRectFromModel) {
+        throw new Error('Unable to take screenshot: no outlineRect available.');
+      }
+      const outlineRect = outlineRectFromModel.scale(scale);
       const screenRect = this._model.screenRect().scale(scale);
       const visiblePageRect = this._model.visiblePageRect().scale(scale);
       const contentLeft = screenRect.left + visiblePageRect.left - outlineRect.left;

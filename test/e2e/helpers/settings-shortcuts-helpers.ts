@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 import {assert} from 'chai';
 import {ElementHandle} from 'puppeteer';
-import {$$, $$textContent, click, selectOption, waitFor, waitForElementsWithTextContent, waitForElementWithTextContent, waitForFunction} from '../../shared/helper.js';
+import {$$, $$textContent, click, platform, selectOption, waitFor, waitForElementsWithTextContent, waitForElementWithTextContent, waitForFunction} from '../../shared/helper.js';
 
 const CANCEL_BUTTON_SELECTOR = '[aria-label="Discard changes"]';
 const CONFIRM_BUTTON_SELECTOR = '[aria-label="Confirm changes"]';
@@ -14,6 +14,27 @@ const SHORTCUT_DISPLAY_SELECTOR = '.keybinds-shortcut';
 const SHORTCUT_INPUT_SELECTOR = '.keybinds-editing input';
 const SHORTCUT_SELECT_TEXT = 'DevTools (Default)Visual Studio Code';
 export const ADD_SHORTCUT_LINK_TEXT = 'Add a shortcut';
+
+export let VS_CODE_SHORTCUTS_SHORTCUTS = ['CtrlKCtrlS'];
+export let VS_CODE_SETTINGS_SHORTCUTS = ['Shift?', 'Ctrl,'];
+export let VS_CODE_SHORTCUTS_QUICK_OPEN_TEXT = 'SettingsShortcutsCtrl + K Ctrl + S';
+export let VS_CODE_PAUSE_SHORTCUTS = ['Ctrl\\', 'F5', 'ShiftF5'];
+export let CONTROL_1_CONTROL_2_SHORTCUT_INPUTS_TEXT = ['Ctrl + 1', 'Ctrl + 2'];
+export let CONTROL_2_SHORTCUT_INPUT_TEXT = ['Ctrl + 2'];
+export let CONTROL_1_CONTROL_2_SHORTCUT_DISPLAY_TEXT = ['Ctrl1', 'Ctrl2'];
+export let CONSOLE_SHORTCUT_INPUT_TEXT = ['Ctrl + `'];
+export let CONSOLE_SHORTCUT_DISPLAY_TEXT = ['Ctrl`'];
+if (platform === 'mac') {
+  VS_CODE_SHORTCUTS_SHORTCUTS = ['⌘ K⌘ S'];
+  VS_CODE_SETTINGS_SHORTCUTS = ['⇧ ?', '⌘ ,'];
+  VS_CODE_SHORTCUTS_QUICK_OPEN_TEXT = 'SettingsShortcuts⌘ K ⌘ S';
+  VS_CODE_PAUSE_SHORTCUTS = ['F5', '⇧ F5', '⌘ \\'];
+  CONTROL_1_CONTROL_2_SHORTCUT_INPUTS_TEXT = ['Ctrl 1', 'Ctrl 2'];
+  CONTROL_2_SHORTCUT_INPUT_TEXT = ['Ctrl 2'];
+  CONTROL_1_CONTROL_2_SHORTCUT_DISPLAY_TEXT = CONTROL_1_CONTROL_2_SHORTCUT_INPUTS_TEXT;
+  CONSOLE_SHORTCUT_INPUT_TEXT = ['Ctrl `'];
+  CONSOLE_SHORTCUT_DISPLAY_TEXT = CONSOLE_SHORTCUT_INPUT_TEXT;
+}
 
 export const selectKeyboardShortcutPreset = async (option: string) => {
   const presetSelectElement = await waitForElementWithTextContent(SHORTCUT_SELECT_TEXT);
@@ -108,4 +129,9 @@ export const waitForEmptyShortcutInput = async () => {
     const shortcutInputValueStrings = await Promise.all(shortcutInputValues.map(value => value.jsonValue()));
     return shortcutInputValueStrings.includes('');
   });
+};
+
+export const waitForVSCodeShortcutPreset = async () => {
+  // wait for a shortcut that vsCode has but the default preset does not
+  await waitForElementWithTextContent(VS_CODE_SHORTCUTS_SHORTCUTS.join(''));
 };
