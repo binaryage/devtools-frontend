@@ -34,6 +34,7 @@ devtools_module("console") {
     "../text_editor:bundle", # for dirac
     "../theme_support:bundle",
     "../ui:bundle",
+    "../dirac:bundle",
   ]
 }
 
@@ -44,6 +45,10 @@ copy_to_gen("legacy_css") {
     "consolePrompt.css",
     "consoleSidebar.css",
     "consoleView.css",
+    "dirac-hacks.css",
+    "dirac-codemirror.css",
+    "dirac-theme.css",
+    "dirac-prompt.css"
   ]
 }
 

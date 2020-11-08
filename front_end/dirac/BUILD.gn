@@ -18,6 +18,8 @@ devtools_module("dirac") {
     "../sdk:bundle",
     "../root:bundle",
     "../ui:bundle",
+    "../workspace:bundle",
+    "../bindings:bundle",
   ]}
 
 devtools_entrypoint("bundle") {

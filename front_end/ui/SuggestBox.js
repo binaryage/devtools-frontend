@@ -226,8 +226,11 @@ export class SuggestBox {
       element.classList.add('secondary');
     }
     element.tabIndex = -1;
-    if (item.prologue) {
-      element.createChild('span', 'prologue').textContent = item.prologue.trimEndWithMaxLength(50);
+    if (item.className) {
+      const prologueEl = element.createChild('span', 'prologue');
+      if (item.prologue) {
+        prologueEl.textContent = item.prologue.trimEndWithMaxLength(50);
+      }
     }
     const maxTextLength = 50 + query.length;
     const displayText = (item.title || item.text).trim().trimEndWithMaxLength(maxTextLength).replace(/\n/g, '\u21B5');
@@ -241,8 +244,11 @@ export class SuggestBox {
       titleElement.createChild('span', 'query').textContent = displayText.substring(index, index + query.length);
     }
     titleElement.createChild('span', 'post-query').textContent = displayText.substring(index > -1 ? index + query.length : 0);
-    if (item.epilogue) {
-      element.createChild('span', 'epilogue').textContent = item.epilogue.trimEndWithMaxLength(50);
+    if (item.className) {
+      const epilogueEl = element.createChild('span', 'epilogue');
+      if (item.epilogue) {
+        epilogueEl.textContent = item.epilogue.trimEndWithMaxLength(50);
+      }
     }
     titleElement.createChild('span', 'spacer');
     if (item.subtitleRenderer) {

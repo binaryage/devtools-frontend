@@ -336,7 +336,7 @@ Keyboard.prototype.createEventFromKeystroke = function createEventFromKeystroke(
  * action was undertaken by a human.
  *
  * @param {string} action e.g. "alt+shift+left" or "backspace"
- * @param {!HTMLElement} target
+ * @param {HTMLElement|HTMLDocument} target
  * @param {?function()} callback
  * @this {Keyboard}
  */
@@ -403,7 +403,7 @@ Keyboard.prototype.dispatchEventsForInput = function(input, target, callback) {
  * shift, ctrl, alt, and meta keys surrounding the actual keystroke.
  *
  * @param {!Keystroke} keystroke
- * @param {!HTMLElement} target
+ * @param {HTMLElement|HTMLDocument} target
  * @param {boolean=} transitionModifiers
  * @param {number} events
  * @param {?function(string):string} mutation
