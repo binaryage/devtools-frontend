@@ -669,7 +669,7 @@ export let ScopeInfo;
 function extractNamesFromScopePromise(scope) {
   const title = getScopeTitle(scope);
   // @ts-ignore
-  const remoteObject = globalThis.Sources.SourceMapNamesResolver.resolveScopeInObject(scope);
+  const remoteObject = scope.object(); // resolveScopeInObject(scope);
 
   const result = {title: title};
   let resolved = false;
