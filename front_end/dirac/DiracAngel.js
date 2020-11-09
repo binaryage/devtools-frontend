@@ -48,7 +48,7 @@ export const toggles = {
   hasLinkActions: hasFeature('link-actions'),
 
   DEBUG_EVAL: hasDebugFlag('eval'),
-  DEBUG_COMPLETIONS: true, // hasDebugFlag('completions'),
+  DEBUG_COMPLETIONS: hasDebugFlag('completions'),
   DEBUG_KEYSIM: hasDebugFlag('keysim'),
   DEBUG_FEEDBACK: hasDebugFlag('feedback'),
   DEBUG_WATCHING: hasDebugFlag('watching'),
