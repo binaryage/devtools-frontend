@@ -404,8 +404,6 @@ export class MainImpl {
     // Allow UI cycles to repaint prior to creating connection.
     setTimeout(this._initializeTarget.bind(this), 0);
     MainImpl.timeEnd('Main._showAppUI');
-    const diracAngel = Common.getDiracAngel();
-    diracAngel.feedback('devtools ready');
   }
 
   async _initializeTarget() {
@@ -451,6 +449,7 @@ export class MainImpl {
     MainImpl.timeEnd('Main._lateInitialization');
     const diracAngel = Common.getDiracAngel();
     diracAngel.notifyFrontendInitialized();
+    diracAngel.feedback('devtools ready');
   }
 
   /**
