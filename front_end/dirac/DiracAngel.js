@@ -1518,6 +1518,7 @@ export function getPanel(name) {
  getReplSpecialsAsync?: Function
  isIntercomReady?: Function
  reportNamespacesCacheMutation?: Function
+ getNamespaceCacheReadyPromise?: Function
 }} */
 export const extension = {};
 
@@ -1711,6 +1712,16 @@ export function reportNamespacesCacheMutation() {
     throw Error('extension.reportNamespacesCacheMutation called too early');
   }
   return extension.reportNamespacesCacheMutation(...arguments);
+}
+
+/**
+ * @returns {Promise<boolean>}
+ */
+export function getNamespaceCacheReadyPromise() {
+  if (!extension.getNamespaceCacheReadyPromise) {
+    throw Error('extension.getNamespaceCacheReadyPromise called too early');
+  }
+  return extension.getNamespaceCacheReadyPromise(...arguments);
 }
 
 // eslint-disable-next-line no-console
