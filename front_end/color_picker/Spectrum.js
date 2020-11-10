@@ -565,7 +565,7 @@ export class Spectrum extends UI.Widget.VBox {
    * @return {boolean}
    */
   _paletteDragStart(e) {
-    const element = e.deepElementFromPoint();
+    const element = UI.UIUtils.deepElementFromEvent(e);
     if (!element || !element.__mutable) {
       return false;
     }
@@ -908,8 +908,8 @@ export class Spectrum extends UI.Widget.VBox {
       this._colorFormat = colorFormat;
     }
 
-    if (hsva && this._contrastInfo) {
-      this._contrastInfo.setColor(Common.Color.Color.fromHSVA(hsva));
+    if (this._contrastInfo) {
+      this._contrastInfo.setColor(Common.Color.Color.fromHSVA(this._hsv), this._colorFormat);
     }
 
     this._updateHelperLocations();

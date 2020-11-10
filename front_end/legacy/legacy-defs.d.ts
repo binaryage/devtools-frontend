@@ -154,14 +154,12 @@ interface DocumentFragment {
 
 interface Event {
   consume(preventDefault?: boolean): void;
-  deepElementFromPoint(): Node|null;
   handled: boolean|undefined;
   isMetaOrCtrlForTest: boolean;
 }
 
 interface Node {
   enclosingNodeOrSelfWithClass(className: string, stayWithin?: Element): Element;
-  enclosingNodeOrSelfWithNodeName(nodeName: string): Node|null;
   getComponentRoot(): Document|DocumentFragment|null;
   getComponentSelection(): Selection|null;
   hasSameShadowRoot(other: Node): boolean;

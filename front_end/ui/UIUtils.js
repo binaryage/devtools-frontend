@@ -349,7 +349,7 @@ export const StyleValueDelimiters = ' \xA0\t\n"\':;,/()';
  * @param {!Event} event
  * @return {?string}
  */
-function _valueModificationDirection(event) {
+export function getValueModificationDirection(event) {
   let direction = null;
   // TODO(crbug.com/1145518) Remove usage of MouseWheelEvent.
   if (event.type === 'mousewheel') {
@@ -359,6 +359,14 @@ function _valueModificationDirection(event) {
     } else if (event.wheelDeltaY < 0 || event.wheelDeltaX < 0) {
       direction = 'Down';
     }
+  } else if (event.type === 'wheel') {
+    // When shift is pressed while spinning mousewheel, delta comes as wheelDeltaX.
+    // WheelEvent's deltaY is inverse from MouseWheelEvent.
+    if (event.deltaY < 0 || event.deltaX < 0) {
+      direction = 'Up';
+    } else if (event.deltaY > 0 || event.deltaX > 0) {
+      direction = 'Down';
+    }
   } else {
     if (event.key === 'ArrowUp' || event.key === 'PageUp') {
       direction = 'Up';
@@ -366,6 +374,7 @@ function _valueModificationDirection(event) {
       direction = 'Down';
     }
   }
+
   return direction;
 }
 
@@ -375,7 +384,7 @@ function _valueModificationDirection(event) {
  * @return {?string}
  */
 function _modifiedHexValue(hexString, event) {
-  const direction = _valueModificationDirection(event);
+  const direction = getValueModificationDirection(event);
   if (!direction) {
     return null;
   }
@@ -436,7 +445,7 @@ function _modifiedHexValue(hexString, event) {
  * @return {?number}
  */
 function _modifiedFloatNumber(number, event, modifierMultiplier) {
-  const direction = _valueModificationDirection(event);
+  const direction = getValueModificationDirection(event);
   if (!direction) {
     return null;
   }
@@ -1998,3 +2007,63 @@ export function createSVGChild(element, childType, className) {
   element.appendChild(child);
   return child;
 }
+
+
+/**
+ * @param {!Node} initialNode
+ * @param {!Array<string>} nameArray
+ * @return {?Node}
+ */
+export const enclosingNodeOrSelfWithNodeNameInArray = (initialNode, nameArray) => {
+  for (let node = initialNode; node && node !== initialNode.ownerDocument; node = node.parentNodeOrShadowHost()) {
+    for (let i = 0; i < nameArray.length; ++i) {
+      if (node.nodeName.toLowerCase() === nameArray[i].toLowerCase()) {
+        return node;
+      }
+    }
+  }
+  return null;
+};
+
+/**
+ * @param {!Node} node
+ * @param {string} nodeName
+ * @return {?Node}
+ */
+export const enclosingNodeOrSelfWithNodeName = function(node, nodeName) {
+  return enclosingNodeOrSelfWithNodeNameInArray(node, [nodeName]);
+};
+
+/**
+ * @param {null|undefined|!Document|!DocumentFragment} document
+ * @param {number} x
+ * @param {number} y
+ * @return {?Node}
+ */
+export const deepElementFromPoint = (document, x, y) => {
+  let container = document;
+  let node = null;
+  while (container) {
+    const innerNode = container.elementFromPoint(x, y);
+    if (!innerNode || node === innerNode) {
+      break;
+    }
+    node = innerNode;
+    container = node.shadowRoot;
+  }
+  return node;
+};
+
+/**
+ * @param {!Event} event
+ * @return {?Node}
+ */
+export const deepElementFromEvent = event => {
+  // Some synthetic events have zero coordinates which lead to a wrong element. Better return nothing in this case.
+  if (!event.which && !event.pageX && !event.pageY && !event.clientX && !event.clientY && !event.movementX &&
+      !event.movementY) {
+    return null;
+  }
+  const root = event.target && event.target.getComponentRoot();
+  return root ? deepElementFromPoint(root, event.pageX, event.pageY) : null;
+};

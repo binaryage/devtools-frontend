@@ -1893,7 +1893,7 @@ export class StylePropertiesSection {
       event.consume();
       return;
     }
-    const deepTarget = event.deepElementFromPoint();
+    const deepTarget = UI.UIUtils.deepElementFromEvent(event);
     if (deepTarget.treeElement) {
       this.addNewBlankProperty(deepTarget.treeElement.property.index + 1).startEditing();
     } else {
@@ -2623,7 +2623,8 @@ export class CSSPropertyPrompt extends UI.TextPrompt.TextPrompt {
      */
     function customNumberHandler(prefix, number, suffix) {
       if (number !== 0 && !suffix.length &&
-          SDK.CSSMetadata.cssMetadata().isLengthProperty(this._treeElement.property.name)) {
+          SDK.CSSMetadata.cssMetadata().isLengthProperty(this._treeElement.property.name) &&
+          !this._treeElement.property.value.toLowerCase().startsWith('calc(')) {
         suffix = 'px';
       }
       return prefix + number + suffix;

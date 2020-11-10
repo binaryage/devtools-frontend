@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import {CSSAngle, CSSAngleData, PopoverToggledEvent} from '../../../../front_end/inline_editor/CSSAngle.js';
-import {AngleUnit, get2DTranslationsForAngle, getAngleFromRadians, getNextUnit, getRadiansFromAngle, parseText, roundAngleByUnit} from '../../../../front_end/inline_editor/CSSAngleUtils.js';
+import * as InlineEditor from '../../../../front_end/inline_editor/inline_editor.js';
+import type {CSSAngleData, PopoverToggledEvent, UnitChangedEvent, ValueChangedEvent} from '../../../../front_end/inline_editor/CSSAngle.js';
+import {Angle, AngleUnit, convertAngleUnit, get2DTranslationsForAngle, getAngleFromRadians, getNewAngleFromEvent, getNextUnit, getRadiansFromAngle, parseText, roundAngleByUnit} from '../../../../front_end/inline_editor/CSSAngleUtils.js';
 import {assertShadowRoot, renderElementIntoDOM} from '../helpers/DOMHelpers.js';
 
 const {assert} = chai;
@@ -18,13 +19,29 @@ const assertPopoverClosed = (root: ShadowRoot) => {
   assert.notExists(popover);
 };
 
-const togglePopover = (root: ShadowRoot) => {
-  const miniIcon = root.querySelector<HTMLElement>('.mini-icon');
-  if (!miniIcon) {
-    assert.fail('mini icon was not rendered');
+const assertAndGetSwatch = (root: ShadowRoot) => {
+  const swatch = root.querySelector<HTMLElement>('devtools-css-angle-swatch');
+  if (!swatch) {
+    assert.fail('swatch was not rendered');
     return;
   }
-  miniIcon.dispatchEvent(new Event('click'));
+  return swatch;
+};
+
+const togglePopover = (root: ShadowRoot) => {
+  const swatch = assertAndGetSwatch(root);
+  swatch?.click();
+};
+
+const assertNewAngleFromEvent = (angle: Angle, event: KeyboardEvent|MouseEvent, approximateNewValue: number) => {
+  const newAngle = getNewAngleFromEvent(angle, event);
+  if (!newAngle) {
+    assert.fail('should create a new angle');
+    return;
+  }
+
+  assert.strictEqual(newAngle.unit, angle.unit);
+  assert.approximately(newAngle.value, approximateNewValue, 0.1);
 };
 
 const initialData: CSSAngleData = {
@@ -36,7 +53,7 @@ const initialData: CSSAngleData = {
 
 describe('CSSAngle', () => {
   it('can open and close a popover', () => {
-    const component = new CSSAngle();
+    const component = new InlineEditor.CSSAngleImpl.CSSAngle();
     renderElementIntoDOM(component);
     component.data = initialData;
 
@@ -50,7 +67,7 @@ describe('CSSAngle', () => {
   });
 
   it('can fire events when toggling the popover', () => {
-    const component = new CSSAngle();
+    const component = new InlineEditor.CSSAngleImpl.CSSAngle();
     renderElementIntoDOM(component);
     let isPopoverOpen = false;
     component.data = initialData;
@@ -71,9 +88,60 @@ describe('CSSAngle', () => {
     assert.isFalse(isPopoverOpen, 'external isPopoverOpen flag not synced');
   });
 
+  it('can change unit when the swatch is shift-clicked upon', () => {
+    const component = new InlineEditor.CSSAngleImpl.CSSAngle();
+    renderElementIntoDOM(component);
+    component.data = initialData;
+
+    assertShadowRoot(component.shadowRoot);
+
+    let cssAngleText = initialData.angleText;
+    component.addEventListener('unit-changed', (event: Event) => {
+      const {data} = event as UnitChangedEvent;
+      cssAngleText = data.value;
+    });
+
+    const swatch = assertAndGetSwatch(component.shadowRoot);
+    if (!swatch) {
+      return;
+    }
+    const shiftClick = new MouseEvent('click', {shiftKey: true});
+    swatch.dispatchEvent(shiftClick);
+    assert.strictEqual(cssAngleText, '50grad', 'angle unit should change to Grad from Deg');
+  });
+
+  it('can +/- angle values when pressing UP or DOWN keys', () => {
+    const component = new InlineEditor.CSSAngleImpl.CSSAngle();
+    renderElementIntoDOM(component);
+    component.data = initialData;
+
+    assertShadowRoot(component.shadowRoot);
+
+    let cssAngleText = initialData.angleText;
+    component.addEventListener('value-changed', (event: Event) => {
+      const {data} = event as ValueChangedEvent;
+      cssAngleText = data.value;
+    });
+
+    togglePopover(component.shadowRoot);
+    const angleContainer = component.shadowRoot.querySelector('.css-angle');
+    if (!angleContainer) {
+      assert.fail('angle container was not rendered');
+      return;
+    }
+
+    const arrowUp = new KeyboardEvent('keydown', {key: 'ArrowUp'});
+    angleContainer.dispatchEvent(arrowUp);
+    assert.strictEqual(cssAngleText, '46deg', 'angle value should increase by 1 when ArrowUp is pressed');
+
+    const arrowDownShift = new KeyboardEvent('keydown', {key: 'ArrowDown', shiftKey: true});
+    angleContainer.dispatchEvent(arrowDownShift);
+    assert.strictEqual(cssAngleText, '36deg', 'angle value should increase by 1 when ArrowUp is pressed');
+  });
+
   describe('#CSSAngleUtils', () => {
     it('can fire PopoverToggledEvent when toggling the popover', () => {
-      const component = new CSSAngle();
+      const component = new InlineEditor.CSSAngleImpl.CSSAngle();
       renderElementIntoDOM(component);
       let shouldPopoverEventBeOpen = false;
       component.data = initialData;
@@ -224,6 +292,64 @@ describe('CSSAngle', () => {
       assert.strictEqual(getNextUnit(AngleUnit.Grad), AngleUnit.Rad);
       assert.strictEqual(getNextUnit(AngleUnit.Rad), AngleUnit.Turn);
       assert.strictEqual(getNextUnit(AngleUnit.Turn), AngleUnit.Deg);
+    });
+
+    it('converts angle units correctly', () => {
+      assert.deepEqual(
+          convertAngleUnit(
+              {
+                value: 45,
+                unit: AngleUnit.Deg,
+              },
+              AngleUnit.Grad),
+          {
+            value: 50,
+            unit: AngleUnit.Grad,
+          });
+
+      assert.deepEqual(
+          convertAngleUnit(
+              {
+                value: Math.PI / 180,
+                unit: AngleUnit.Rad,
+              },
+              AngleUnit.Deg),
+          {
+            value: 1,
+            unit: AngleUnit.Deg,
+          });
+
+      assert.deepEqual(
+          convertAngleUnit(
+              {
+                value: 1,
+                unit: AngleUnit.Turn,
+              },
+              AngleUnit.Deg),
+          {
+            value: 360,
+            unit: AngleUnit.Deg,
+          });
+    });
+
+    it('gets new angles from events correctly', () => {
+      const originalAngle = {
+        value: 45,
+        unit: AngleUnit.Deg,
+      };
+
+      const arrowDown = new KeyboardEvent('keydown', {key: 'ArrowDown'});
+      const arrowUpShift = new KeyboardEvent('keydown', {key: 'ArrowUp', shiftKey: true});
+      const wheelUp = new WheelEvent('wheel', {deltaY: 1});
+      const wheelDownShift = new WheelEvent('wheel', {deltaX: -1, shiftKey: true});
+
+      assertNewAngleFromEvent(originalAngle, arrowDown, 44);
+      assertNewAngleFromEvent(originalAngle, arrowUpShift, 55);
+      assertNewAngleFromEvent(originalAngle, wheelUp, 44);
+      assertNewAngleFromEvent(originalAngle, wheelDownShift, 55);
+
+      const otherEvent = new MouseEvent('mousedown');
+      assert.notExists(getNewAngleFromEvent(originalAngle, otherEvent));
     });
   });
 });

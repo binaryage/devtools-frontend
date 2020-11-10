@@ -108,3 +108,25 @@ export const getNextUnit = (currentUnit: AngleUnit): AngleUnit => {
       return AngleUnit.Deg;
   }
 };
+
+export const convertAngleUnit = (angle: Angle, newUnit: AngleUnit): Angle => {
+  if (angle.unit === newUnit) {
+    return angle;
+  }
+  const radian = getRadiansFromAngle(angle);
+  return getAngleFromRadians(radian, newUnit);
+};
+
+export const getNewAngleFromEvent = (angle: Angle, event: MouseEvent|KeyboardEvent): Angle|undefined => {
+  const direction = UI.UIUtils.getValueModificationDirection(event);
+  if (direction === null) {
+    return;
+  }
+  let diff = direction === 'Up' ? Math.PI / 180 : -Math.PI / 180;
+  if (event.shiftKey) {
+    diff *= 10;
+  }
+
+  const radian = getRadiansFromAngle(angle);
+  return getAngleFromRadians(radian + diff, angle.unit);
+};

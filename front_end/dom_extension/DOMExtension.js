@@ -181,29 +181,6 @@ Element.prototype.positionAt = function(x, y, relativeTo) {
 };
 
 /**
- * @param {!Array.<string>} nameArray
- * @return {?Node}
- */
-Node.prototype.enclosingNodeOrSelfWithNodeNameInArray = function(nameArray) {
-  for (let node = this; node && node !== this.ownerDocument; node = node.parentNodeOrShadowHost()) {
-    for (let i = 0; i < nameArray.length; ++i) {
-      if (node.nodeName.toLowerCase() === nameArray[i].toLowerCase()) {
-        return node;
-      }
-    }
-  }
-  return null;
-};
-
-/**
- * @param {string} nodeName
- * @return {?Node}
- */
-Node.prototype.enclosingNodeOrSelfWithNodeName = function(nodeName) {
-  return this.enclosingNodeOrSelfWithNodeNameInArray([nodeName]);
-};
-
-/**
  * @param {string} className
  * @param {!Element=} stayWithin
  * @return {?Element}
@@ -733,40 +710,6 @@ Node.prototype.setTextContentTruncatedIfNeeded = function(text, placeholder) {
   this.textContent = text;
   return false;
 };
-
-/**
- * @return {?Node}
- */
-Event.prototype.deepElementFromPoint = function() {
-  // Some synthetic events have zero coordinates which lead to a wrong element. Better return nothing in this case.
-  if (!this.which && !this.pageX && !this.pageY && !this.clientX && !this.clientY && !this.movementX &&
-      !this.movementY) {
-    return null;
-  }
-  const root = this.target && this.target.getComponentRoot();
-  return root ? root.deepElementFromPoint(this.pageX, this.pageY) : null;
-};
-
-/**
- * @param {number} x
- * @param {number} y
- * @return {?Node}
- */
-Document.prototype.deepElementFromPoint = function(x, y) {
-  let container = this;
-  let node = null;
-  while (container) {
-    const innerNode = container.elementFromPoint(x, y);
-    if (!innerNode || node === innerNode) {
-      break;
-    }
-    node = innerNode;
-    container = node.shadowRoot;
-  }
-  return node;
-};
-
-DocumentFragment.prototype.deepElementFromPoint = Document.prototype.deepElementFromPoint;
 
 /**
  * @return {?Element}
