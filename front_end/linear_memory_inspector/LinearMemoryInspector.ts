@@ -12,13 +12,14 @@ import * as LitHtml from '../third_party/lit-html/lit-html.js';
 const {render, html} = LitHtml;
 
 import {HistoryNavigationEvent, LinearMemoryNavigatorData, Navigation, PageNavigationEvent} from './LinearMemoryNavigator.js';
-import {LinearMemoryValueInterpreterData} from './LinearMemoryValueInterpreter.js';
-import {ByteSelectedEvent, LinearMemoryViewer, LinearMemoryViewerData} from './LinearMemoryViewer.js';
+import type {LinearMemoryValueInterpreterData, ValueTypeToggleEvent} from './LinearMemoryValueInterpreter.js';
+import type {ByteSelectedEvent, LinearMemoryViewerData, ResizeEvent} from './LinearMemoryViewer.js';
 import {VALUE_INTEPRETER_MAX_NUM_BYTES, ValueType, Endianness} from './ValueInterpreterDisplayUtils.js';
 
 export interface LinearMemoryInspectorData {
   memory: Uint8Array;
   address: number;
+  memoryOffset: number;
 }
 
 class AddressHistoryEntry implements Common.SimpleHistoryManager.HistoryEntry {
@@ -42,19 +43,41 @@ class AddressHistoryEntry implements Common.SimpleHistoryManager.HistoryEntry {
   }
 }
 
+export class MemoryRequestEvent extends Event {
+  data: {start: number, end: number, address: number};
+
+  constructor(start: number, end: number, address: number) {
+    super('memoryRequest');
+    this.data = {start, end, address};
+  }
+}
+
 export class LinearMemoryInspector extends HTMLElement {
   private readonly shadow = this.attachShadow({mode: 'open'});
   private readonly history = new Common.SimpleHistoryManager.SimpleHistoryManager(10);
   private memory = new Uint8Array();
+  private memoryOffset = 0;
   private address = 0;
+  private numBytesPerPage = 4;
+  private valueTypes: Set<ValueType> = new Set([ValueType.Int8, ValueType.Float32, ValueType.Boolean]);
 
   set data(data: LinearMemoryInspectorData) {
+    if (data.address < data.memoryOffset || data.address > data.memoryOffset + data.memory.length || data.address < 0) {
+      throw new Error('Address is out of bounds.');
+    }
+
+    if (data.memoryOffset < 0) {
+      throw new Error('Memory offset has to be greater or equal to zero.');
+    }
+
     this.memory = data.memory;
     this.address = data.address;
+    this.memoryOffset = data.memoryOffset;
     this.render();
   }
 
   private render() {
+    const {start, end} = this.getPageRangeForAddress(this.address, this.numBytesPerPage);
     // Disabled until https://crbug.com/1079231 is fixed.
     // clang-format off
     render(html`
@@ -64,8 +87,7 @@ export class LinearMemoryInspector extends HTMLElement {
           display: flex;
         }
 
-        .memory-inspector {
-          width: 100%;
+        .view {
           display: flex;
           flex: auto;
           flex-direction: column;
@@ -76,25 +98,45 @@ export class LinearMemoryInspector extends HTMLElement {
         devtools-linear-memory-inspector-navigator + devtools-linear-memory-inspector-viewer {
           margin-top: 12px;
         }
+
+        .value-interpreter {
+          display: flex;
+        }
       </style>
-      <div class="memory-inspector">
+      <div class="view">
         <devtools-linear-memory-inspector-navigator
           .data=${{address: this.address} as LinearMemoryNavigatorData}
           @page-navigation=${this.navigatePage}
           @history-navigation=${this.navigateHistory}></devtools-linear-memory-inspector-navigator>
         <devtools-linear-memory-inspector-viewer
-          .data=${{memory: this.memory, address: this.address} as LinearMemoryViewerData}
-          @byte-selected=${(e: ByteSelectedEvent) => this.jumpToAddress(e.data)}></devtools-linear-memory-inspector-viewer>
+          .data=${{memory: this.memory.slice(start - this.memoryOffset, end - this.memoryOffset), address: this.address, memoryOffset: start} as LinearMemoryViewerData}
+          @byte-selected=${(e: ByteSelectedEvent) => this.jumpToAddress(e.data)}
+          @resize=${this.resize}>
+        </devtools-linear-memory-inspector-viewer>
       </div>
-        <devtools-linear-memory-inspector-interpreter .data=${{
-            value: this.memory.slice(this.address, this.address + VALUE_INTEPRETER_MAX_NUM_BYTES).buffer,
-            valueTypes: [ValueType.Int8, ValueType.Int16, ValueType.Int64],
-            endianness: Endianness.Little } as LinearMemoryValueInterpreterData}>
+      <div class="value-interpreter">
+        <devtools-linear-memory-inspector-interpreter
+          .data=${{
+            value: this.memory.slice(this.address - this.memoryOffset, this.address + VALUE_INTEPRETER_MAX_NUM_BYTES).buffer,
+            valueTypes: this.valueTypes,
+            endianness: Endianness.Little } as LinearMemoryValueInterpreterData}
+          @value-type-toggle=${this.onValueTypeToggled}>
         </devtools-linear-memory-inspector-interpreter/>
+      </div>
       `, this.shadow, {
       eventContext: this,
     });
     // clang-format on
+  }
+
+  private onValueTypeToggled(e: ValueTypeToggleEvent) {
+    const {type, checked} = e.data;
+    if (checked) {
+      this.valueTypes.add(type);
+    } else {
+      this.valueTypes.delete(type);
+    }
+    this.render();
   }
 
   private navigateHistory(e: HistoryNavigationEvent) {
@@ -102,23 +144,36 @@ export class LinearMemoryInspector extends HTMLElement {
   }
 
   private navigatePage(e: PageNavigationEvent) {
-    const viewer = this.shadow.querySelector<LinearMemoryViewer>('devtools-linear-memory-inspector-viewer');
-    if (!viewer) {
-      return;
-    }
-
-    const newAddress = e.data === Navigation.Forward ?
-        Math.min(this.address + viewer.getNumBytesPerPage(), this.memory.length - 1) :
-        Math.max(this.address - viewer.getNumBytesPerPage(), 0);
+    const newAddress = e.data === Navigation.Forward ? this.address + this.numBytesPerPage :
+                                                       Math.max(this.address - this.numBytesPerPage, 0);
     this.jumpToAddress(newAddress);
   }
 
   private jumpToAddress(address: number) {
     const historyEntry = new AddressHistoryEntry(address, x => this.jumpToAddress(x));
     this.history.push(historyEntry);
-
     this.address = address;
-    this.render();
+    this.update();
+  }
+
+  private getPageRangeForAddress(address: number, numBytesPerPage: number) {
+    const pageNumber = Math.floor(address / numBytesPerPage);
+    const pageStartAddress = pageNumber * numBytesPerPage;
+    return {start: pageStartAddress, end: pageStartAddress + numBytesPerPage};
+  }
+
+  private resize(event: ResizeEvent) {
+    this.numBytesPerPage = event.data;
+    this.update();
+  }
+
+  private update() {
+    const {start, end} = this.getPageRangeForAddress(this.address, this.numBytesPerPage);
+    if (start < this.memoryOffset || end > this.memoryOffset + this.memory.length) {
+      this.dispatchEvent(new MemoryRequestEvent(start, end, this.address));
+    } else {
+      this.render();
+    }
   }
 }
 

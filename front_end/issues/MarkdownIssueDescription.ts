@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import * as Marked from '../marked/marked.js';
 import * as Root from '../root/root.js';
 import * as SDK from '../sdk/sdk.js';
+import * as Marked from '../third_party/marked/marked.js';
 
 import {MarkdownView} from './MarkdownView.js';
 
 export function createIssueDescriptionFromMarkdown(description: SDK.Issue.MarkdownIssueDescription):
     SDK.Issue.IssueDescription {
   const rawMarkdown = getMarkdownFileContent(description.file);
-  return createIssueDescriptionFromRawMarkdown(rawMarkdown, description);
+  const rawMarkdownWithPlaceholdersReplaced = substitutePlaceholders(rawMarkdown, description.substitutions);
+  return createIssueDescriptionFromRawMarkdown(rawMarkdownWithPlaceholdersReplaced, description);
 }
 
 function getMarkdownFileContent(filename: string): string {
@@ -20,6 +21,29 @@ function getMarkdownFileContent(filename: string): string {
     throw new Error(`Markdown file ${filename} not found. Declare it as a resource in the module.json file`);
   }
   return rawMarkdown;
+}
+
+const validPlaceholderPattern = /\{(PLACEHOLDER_[a-zA-Z][a-zA-Z0-9]*)\}/g;
+
+/**
+ * Replaces placeholders in markdown text with a string provided by the
+ * `substitutions` map. To keep mental overhead to a minimum, the same
+ * syntax is used as for l10n placeholders.
+ *
+ * Example:
+ *   const str = "This is markdown with `code` and two placeholders, namely {PH1} and {PH2}".
+ *   const result = substitePlaceholders(str, new Map([['PH1', 'foo'], ['PH2', 'bar']]));
+ *
+ * Exported only for unit testing.
+ */
+export function substitutePlaceholders(markdown: string, substitutions?: Map<string, string>): string {
+  return markdown.replace(validPlaceholderPattern, (_, placeholder) => {
+    const replacement = substitutions ? substitutions.get(placeholder) : undefined;
+    if (!replacement) {
+      throw new Error(`No replacment provided for placeholder '${placeholder}'.`);
+    }
+    return replacement;
+  });
 }
 
 /**

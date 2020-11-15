@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import {ColumnHeaderClickEvent, DataGrid, DataGridData} from '../../../../../front_end/ui/components/DataGrid.js';
-import {ArrowKey, calculateColumnWidthPercentageFromWeighting, Column, handleArrowKeyNavigation, Row, SortDirection} from '../../../../../front_end/ui/components/DataGridUtils.js';
+import * as LitHtml from '../../../../../front_end/third_party/lit-html/lit-html.js';
+import * as UIComponents from '../../../../../front_end/ui/components/components.js';  // eslint-disable-line rulesdir/es_modules_import
+
 import {assertElement, assertElements, assertShadowRoot, dispatchClickEvent, dispatchKeyDownEvent, getEventPromise, renderElementIntoDOM} from '../../helpers/DOMHelpers.js';
 import {withMutations} from '../../helpers/MutationHelpers.js';
 
-import {assertCurrentFocusedCellIs, emulateUserFocusingCellAt, emulateUserKeyboardNavigation, focusTableCell, getFocusableCell, getHeaderCellForColumnId, getHeaderCells, getValuesOfAllBodyRows, getValuesOfBodyRowByAriaIndex} from './DataGridHelpers.js';
+import {assertCurrentFocusedCellIs, emulateUserFocusingCellAt, emulateUserKeyboardNavigation, focusTableCell, getCellByIndexes, getFocusableCell, getHeaderCellForColumnId, getHeaderCells, getValuesOfAllBodyRows, getValuesOfBodyRowByAriaIndex} from './DataGridHelpers.js';
 
 const {assert} = chai;
 
-const createColumns = (): Column[] => {
+const createColumns = (): UIComponents.DataGridUtils.Column[] => {
   return [
     {id: 'city', title: 'City', sortable: true, widthWeighting: 2},
     {id: 'country', title: 'Country', sortable: false, widthWeighting: 2},
@@ -19,7 +20,7 @@ const createColumns = (): Column[] => {
   ];
 };
 
-const createRows = (): Row[] => {
+const createRows = (): UIComponents.DataGridUtils.Row[] => {
   return [
     {
       cells: [
@@ -45,8 +46,8 @@ const createRows = (): Row[] => {
   ];
 };
 
-const columns: Column[] = createColumns();
-const rows: Row[] = createRows();
+const columns: UIComponents.DataGridUtils.Column[] = createColumns();
+const rows: UIComponents.DataGridUtils.Row[] = createRows();
 const columnsWithNoneSortable = createColumns().map(col => {
   col.sortable = false;
   return col;
@@ -56,8 +57,8 @@ Object.freeze(columns);
 Object.freeze(columnsWithNoneSortable);
 Object.freeze(rows);
 
-const renderDataGrid = (data: Partial<DataGridData>): DataGrid => {
-  const component = new DataGrid();
+const renderDataGrid = (data: Partial<UIComponents.DataGrid.DataGridData>): UIComponents.DataGrid.DataGrid => {
+  const component = new UIComponents.DataGrid.DataGrid();
   component.data = {
     rows: data.rows || [],
     columns: data.columns || [],
@@ -123,6 +124,49 @@ describe('DataGrid', () => {
     });
   });
 
+  describe('data-grid renderers', () => {
+    /**
+     * It's useful to use innerHTML in the tests to have full confidence in the
+     * renderer output, but LitHtml uses comment nodes to split dynamic from
+     * static parts of a template, and we don't want our tests full of noise
+     * from those.
+     */
+    const stripLitHtmlCommentNodes = (text: string) => text.replaceAll('<!---->', '');
+
+    it('uses the string renderer by default', () => {
+      const columns: UIComponents.DataGridUtils.Column[] = [{id: 'key', title: 'Key', widthWeighting: 1}];
+      const rows: UIComponents.DataGridUtils.Row[] = [{cells: [{columnId: 'key', value: 'Hello World'}]}];
+      const component = renderDataGrid({columns, rows});
+      renderElementIntoDOM(component);
+      assertShadowRoot(component.shadowRoot);
+      const cell = getCellByIndexes(component.shadowRoot, {column: 0, row: 1});
+      assert.deepEqual(stripLitHtmlCommentNodes(cell.innerHTML), 'Hello World');
+    });
+
+    it('can use the code block render to render text in a <code> tag', () => {
+      const columns: UIComponents.DataGridUtils.Column[] = [{id: 'key', title: 'Key', widthWeighting: 1}];
+      const rows: UIComponents.DataGridUtils.Row[] = [
+        {cells: [{columnId: 'key', value: 'Hello World', renderer: UIComponents.DataGridRenderers.codeBlockRenderer}]},
+      ];
+      const component = renderDataGrid({columns, rows});
+      renderElementIntoDOM(component);
+      assertShadowRoot(component.shadowRoot);
+      const cell = getCellByIndexes(component.shadowRoot, {column: 0, row: 1});
+      assert.deepEqual(stripLitHtmlCommentNodes(cell.innerHTML), '<code>Hello World</code>');
+    });
+
+    it('accepts any custom renderer', () => {
+      const columns: UIComponents.DataGridUtils.Column[] = [{id: 'key', title: 'Key', widthWeighting: 1}];
+      const rows: UIComponents.DataGridUtils.Row[] =
+          [{cells: [{columnId: 'key', value: 'Hello World', renderer: value => LitHtml.html`<p>foo: ${value}</p>`}]}];
+      const component = renderDataGrid({columns, rows});
+      renderElementIntoDOM(component);
+      assertShadowRoot(component.shadowRoot);
+      const cell = getCellByIndexes(component.shadowRoot, {column: 0, row: 1});
+      assert.deepEqual(stripLitHtmlCommentNodes(cell.innerHTML), '<p>foo: Hello World</p>');
+    });
+  });
+
   describe('aria-labels', () => {
     it('adds rowcount and colcount to the table', () => {
       const component = renderDataGrid({columns, rows});
@@ -160,7 +204,7 @@ describe('DataGrid', () => {
         rows,
         activeSort: {
           columnId: 'city',
-          direction: SortDirection.ASC,
+          direction: UIComponents.DataGridUtils.SortDirection.ASC,
         },
       });
       assertShadowRoot(component.shadowRoot);
@@ -175,7 +219,7 @@ describe('DataGrid', () => {
         rows,
         activeSort: {
           columnId: 'city',
-          direction: SortDirection.DESC,
+          direction: UIComponents.DataGridUtils.SortDirection.DESC,
         },
       });
       assertShadowRoot(component.shadowRoot);
@@ -379,7 +423,8 @@ describe('DataGrid', () => {
     renderElementIntoDOM(component);
     assertShadowRoot(component.shadowRoot);
 
-    const columnHeaderClickEvent = getEventPromise<ColumnHeaderClickEvent>(component, 'column-header-click');
+    const columnHeaderClickEvent =
+        getEventPromise<UIComponents.DataGrid.ColumnHeaderClickEvent>(component, 'column-header-click');
     const cityColumn = getHeaderCellForColumnId(component.shadowRoot, 'city');
     dispatchClickEvent(cityColumn);
 
@@ -392,22 +437,33 @@ describe('DataGrid', () => {
     renderElementIntoDOM(component);
     assertShadowRoot(component.shadowRoot);
 
-    const columnHeaderClickEvent = getEventPromise<ColumnHeaderClickEvent>(component, 'column-header-click');
+    const columnHeaderClickEvent =
+        getEventPromise<UIComponents.DataGrid.ColumnHeaderClickEvent>(component, 'column-header-click');
     const focusableCell = getFocusableCell(component.shadowRoot);
     focusableCell.focus();
     const table = component.shadowRoot.querySelector('table');
     assertElement(table, HTMLTableElement);
     // Navigate up to the column header
-    dispatchKeyDownEvent(table, {key: ArrowKey.UP});
+    dispatchKeyDownEvent(table, {key: UIComponents.DataGridUtils.ArrowKey.UP});
     const newFocusedCell = getFocusableCell(component.shadowRoot);
     assert.strictEqual(newFocusedCell.getAttribute('data-row-index'), '0');
     assert.strictEqual(newFocusedCell.getAttribute('data-col-index'), '0');
 
     dispatchKeyDownEvent(table, {key: 'Enter'});
-
     const clickEvent = await columnHeaderClickEvent;
-
     assert.deepEqual(clickEvent.data, {column: columns[0], columnIndex: 0});
+  });
+
+  it('emits an event when the user focuses a cell', async () => {
+    const component = renderDataGrid({rows, columns: columnsWithNoneSortable});
+    renderElementIntoDOM(component);
+    assertShadowRoot(component.shadowRoot);
+
+    const bodyCellFocusedEvent = getEventPromise<UIComponents.DataGrid.BodyCellFocusedEvent>(component, 'cell-focused');
+    const focusableCell = getFocusableCell(component.shadowRoot);
+    focusableCell.focus();
+    const cellFocusedEvent = await bodyCellFocusedEvent;
+    assert.deepEqual(cellFocusedEvent.data, {cell: rows[0].cells[0], row: rows[0]});
   });
 
   describe('adding new rows', () => {
@@ -450,7 +506,7 @@ describe('DataGrid', () => {
         {id: 'value', title: 'Value', sortable: false, widthWeighting: 1},
       ];
 
-      const rows: Row[] = [
+      const rows: UIComponents.DataGridUtils.Row[] = [
         {cells: [{columnId: 'key', value: 'Row'}, {columnId: 'value', value: 'One'}]},
         {cells: [{columnId: 'key', value: 'Row'}, {columnId: 'value', value: 'Two'}]},
         {cells: [{columnId: 'key', value: 'Row'}, {columnId: 'value', value: 'Three'}]},
@@ -489,7 +545,7 @@ describe('DataGrid', () => {
         {id: 'value', title: 'Value', sortable: false, widthWeighting: 1},
       ];
 
-      const rows: Row[] = [
+      const rows: UIComponents.DataGridUtils.Row[] = [
         {cells: [{columnId: 'key', value: 'Row'}, {columnId: 'value', value: 'One'}]},
         {cells: [{columnId: 'key', value: 'Row'}, {columnId: 'value', value: 'Two'}]},
         {cells: [{columnId: 'key', value: 'Row'}, {columnId: 'value', value: 'Three'}]},
@@ -524,8 +580,8 @@ describe('DataGrid', () => {
     });
   });
 
-  describe('calculateColumnWidthPercentageFromWeighting', () => {
-    const makeColumnsWithWeightings = (...weights: number[]): Column[] => {
+  describe('UIComponents.DataGridUtils.calculateColumnWidthPercentageFromWeighting', () => {
+    const makeColumnsWithWeightings = (...weights: number[]): UIComponents.DataGridUtils.Column[] => {
       return weights.map((weight, index) => {
         return {
           id: `column-${index}`,
@@ -539,33 +595,36 @@ describe('DataGrid', () => {
 
     it('correctly divides columns based on the weighting', () => {
       const columns = makeColumnsWithWeightings(1, 1);
-      const calculatedWidths = columns.map(col => calculateColumnWidthPercentageFromWeighting(columns, col.id));
+      const calculatedWidths =
+          columns.map(col => UIComponents.DataGridUtils.calculateColumnWidthPercentageFromWeighting(columns, col.id));
       assert.deepEqual(calculatedWidths, [50, 50]);
     });
 
     it('correctly divides and rounds when the % are not whole numbers', () => {
       const columns = makeColumnsWithWeightings(1, 1, 1);
-      const calculatedWidths = columns.map(col => calculateColumnWidthPercentageFromWeighting(columns, col.id));
+      const calculatedWidths =
+          columns.map(col => UIComponents.DataGridUtils.calculateColumnWidthPercentageFromWeighting(columns, col.id));
       assert.deepEqual(calculatedWidths, [33, 33, 33]);
     });
 
     it('does not include hidden columns when calculating weighting', () => {
       const columns = makeColumnsWithWeightings(1, 1, 1);
       columns[0].hidden = true;
-      const calculatedWidths = columns.map(col => calculateColumnWidthPercentageFromWeighting(columns, col.id));
+      const calculatedWidths =
+          columns.map(col => UIComponents.DataGridUtils.calculateColumnWidthPercentageFromWeighting(columns, col.id));
       assert.deepEqual(calculatedWidths, [0, 50, 50]);
     });
 
     it('errors if a column has a weighting of less than 1', () => {
       const columns = makeColumnsWithWeightings(0.5);
       assert.throws(
-          () => calculateColumnWidthPercentageFromWeighting(columns, columns[0].id),
+          () => UIComponents.DataGridUtils.calculateColumnWidthPercentageFromWeighting(columns, columns[0].id),
           'Error with column column-0: width weightings must be >= 1.');
     });
   });
 
-  describe('#handleArrowKeyNavigation util', () => {
-    const makeColumns = (): Column[] => {
+  describe('#UIComponents.DataGridUtils.handleArrowKeyNavigation util', () => {
+    const makeColumns = (): UIComponents.DataGridUtils.Column[] => {
       return [
         {id: 'a', title: 'A', sortable: false, hidden: false, widthWeighting: 1},
         {id: 'b', title: 'B', sortable: false, hidden: false, widthWeighting: 1},
@@ -573,7 +632,7 @@ describe('DataGrid', () => {
       ];
     };
 
-    const makeRows = (): Row[] => {
+    const makeRows = (): UIComponents.DataGridUtils.Row[] => {
       return [
         {
           cells: [
@@ -604,8 +663,8 @@ describe('DataGrid', () => {
 
     describe('navigating left', () => {
       it('does not let the user move further left than the first column', () => {
-        const newFocusedCell = handleArrowKeyNavigation({
-          key: ArrowKey.LEFT,
+        const newFocusedCell = UIComponents.DataGridUtils.handleArrowKeyNavigation({
+          key: UIComponents.DataGridUtils.ArrowKey.LEFT,
           currentFocusedCell: [0, 1],
           columns: makeColumns(),
           rows: makeRows(),
@@ -616,8 +675,8 @@ describe('DataGrid', () => {
       it('does not let the user move left if there are no visible columns to the left', () => {
         const columnsWithFirstHidden = makeColumns();
         columnsWithFirstHidden[0].hidden = true;
-        const newFocusedCell = handleArrowKeyNavigation({
-          key: ArrowKey.LEFT,
+        const newFocusedCell = UIComponents.DataGridUtils.handleArrowKeyNavigation({
+          key: UIComponents.DataGridUtils.ArrowKey.LEFT,
           currentFocusedCell: [1, 1],
           columns: columnsWithFirstHidden,
           rows: makeRows(),
@@ -626,8 +685,8 @@ describe('DataGrid', () => {
       });
 
       it('lets the user move left if the column to the left is visible', () => {
-        const newFocusedCell = handleArrowKeyNavigation({
-          key: ArrowKey.LEFT,
+        const newFocusedCell = UIComponents.DataGridUtils.handleArrowKeyNavigation({
+          key: UIComponents.DataGridUtils.ArrowKey.LEFT,
           currentFocusedCell: [1, 1],
           columns: makeColumns(),
           rows: makeRows(),
@@ -638,8 +697,8 @@ describe('DataGrid', () => {
       it('correctly skips a hidden column to get to the next left visible column', () => {
         const withSecondColumnHidden = makeColumns();
         withSecondColumnHidden[1].hidden = true;
-        const newFocusedCell = handleArrowKeyNavigation({
-          key: ArrowKey.LEFT,
+        const newFocusedCell = UIComponents.DataGridUtils.handleArrowKeyNavigation({
+          key: UIComponents.DataGridUtils.ArrowKey.LEFT,
           currentFocusedCell: [2, 1],
           columns: withSecondColumnHidden,
           rows,
@@ -650,8 +709,8 @@ describe('DataGrid', () => {
 
     describe('navigating right', () => {
       it('does not let the user move further right than the last column', () => {
-        const newFocusedCell = handleArrowKeyNavigation({
-          key: ArrowKey.RIGHT,
+        const newFocusedCell = UIComponents.DataGridUtils.handleArrowKeyNavigation({
+          key: UIComponents.DataGridUtils.ArrowKey.RIGHT,
           currentFocusedCell: [2, 1],
           columns: makeColumns(),
           rows: makeRows(),
@@ -662,8 +721,8 @@ describe('DataGrid', () => {
       it('does not let the user move right if there are no visible columns to the right', () => {
         const columnsWithLastHidden = makeColumns();
         columnsWithLastHidden[2].hidden = true;
-        const newFocusedCell = handleArrowKeyNavigation({
-          key: ArrowKey.RIGHT,
+        const newFocusedCell = UIComponents.DataGridUtils.handleArrowKeyNavigation({
+          key: UIComponents.DataGridUtils.ArrowKey.RIGHT,
           currentFocusedCell: [1, 1],
           columns: columnsWithLastHidden,
           rows: makeRows(),
@@ -672,8 +731,8 @@ describe('DataGrid', () => {
       });
 
       it('lets the user move right if the column to the right is visible', () => {
-        const newFocusedCell = handleArrowKeyNavigation({
-          key: ArrowKey.RIGHT,
+        const newFocusedCell = UIComponents.DataGridUtils.handleArrowKeyNavigation({
+          key: UIComponents.DataGridUtils.ArrowKey.RIGHT,
           currentFocusedCell: [1, 1],
           columns: makeColumns(),
           rows: makeRows(),
@@ -684,8 +743,8 @@ describe('DataGrid', () => {
       it('correctly skips a hidden column to get to the next right visible column', () => {
         const withSecondColumnHidden = makeColumns();
         withSecondColumnHidden[1].hidden = true;
-        const newFocusedCell = handleArrowKeyNavigation({
-          key: ArrowKey.RIGHT,
+        const newFocusedCell = UIComponents.DataGridUtils.handleArrowKeyNavigation({
+          key: UIComponents.DataGridUtils.ArrowKey.RIGHT,
           currentFocusedCell: [0, 1],
           columns: withSecondColumnHidden,
           rows,
@@ -696,8 +755,8 @@ describe('DataGrid', () => {
 
     describe('navigating up', () => {
       it('does not let the user go into the columns row when none are sortable', () => {
-        const newFocusedCell = handleArrowKeyNavigation({
-          key: ArrowKey.UP,
+        const newFocusedCell = UIComponents.DataGridUtils.handleArrowKeyNavigation({
+          key: UIComponents.DataGridUtils.ArrowKey.UP,
           currentFocusedCell: [0, 1],
           columns: makeColumns(),
           rows: makeRows(),
@@ -712,8 +771,8 @@ describe('DataGrid', () => {
         });
 
         it('does let the user go into the columns row', () => {
-          const newFocusedCell = handleArrowKeyNavigation({
-            key: ArrowKey.UP,
+          const newFocusedCell = UIComponents.DataGridUtils.handleArrowKeyNavigation({
+            key: UIComponents.DataGridUtils.ArrowKey.UP,
             currentFocusedCell: [0, 1],
             columns: sortableColumns,
             rows: makeRows(),
@@ -722,8 +781,8 @@ describe('DataGrid', () => {
         });
 
         it('does not let the user go up if they are in the column header', () => {
-          const newFocusedCell = handleArrowKeyNavigation({
-            key: ArrowKey.UP,
+          const newFocusedCell = UIComponents.DataGridUtils.handleArrowKeyNavigation({
+            key: UIComponents.DataGridUtils.ArrowKey.UP,
             currentFocusedCell: [0, 0],
             columns: sortableColumns,
             rows: makeRows(),
@@ -734,8 +793,8 @@ describe('DataGrid', () => {
         it('correctly skips a hidden row to navigate into the columns row', () => {
           const rowsWithFirstHidden = makeRows();
           rowsWithFirstHidden[0].hidden = true;
-          const newFocusedCell = handleArrowKeyNavigation({
-            key: ArrowKey.UP,
+          const newFocusedCell = UIComponents.DataGridUtils.handleArrowKeyNavigation({
+            key: UIComponents.DataGridUtils.ArrowKey.UP,
             currentFocusedCell: [0, 2],
             columns: sortableColumns,
             rows: rowsWithFirstHidden,
@@ -747,8 +806,8 @@ describe('DataGrid', () => {
       it('correctly skips a hidden row while navigating through the body rows', () => {
         const rowsWithSecondHidden = makeRows();
         rowsWithSecondHidden[1].hidden = true;
-        const newFocusedCell = handleArrowKeyNavigation({
-          key: ArrowKey.UP,
+        const newFocusedCell = UIComponents.DataGridUtils.handleArrowKeyNavigation({
+          key: UIComponents.DataGridUtils.ArrowKey.UP,
           currentFocusedCell: [0, 3],
           columns: makeColumns(),
           rows: rowsWithSecondHidden,
@@ -760,8 +819,8 @@ describe('DataGrid', () => {
         const rowsWithFirstAndSecondHidden = makeRows();
         rowsWithFirstAndSecondHidden[0].hidden = true;
         rowsWithFirstAndSecondHidden[1].hidden = true;
-        const newFocusedCell = handleArrowKeyNavigation({
-          key: ArrowKey.UP,
+        const newFocusedCell = UIComponents.DataGridUtils.handleArrowKeyNavigation({
+          key: UIComponents.DataGridUtils.ArrowKey.UP,
           currentFocusedCell: [0, 3],
           columns: makeColumns(),
           rows: rowsWithFirstAndSecondHidden,
@@ -778,8 +837,8 @@ describe('DataGrid', () => {
         });
 
         it('lets the user navigate from the columns into the body', () => {
-          const newFocusedCell = handleArrowKeyNavigation({
-            key: ArrowKey.DOWN,
+          const newFocusedCell = UIComponents.DataGridUtils.handleArrowKeyNavigation({
+            key: UIComponents.DataGridUtils.ArrowKey.DOWN,
             currentFocusedCell: [0, 0],
             columns: sortableColumns,
             rows: makeRows(),
@@ -790,8 +849,8 @@ describe('DataGrid', () => {
         it('correctly skips any hidden body rows to find the first visible one', () => {
           const rowsWithFirstHidden = makeRows();
           rowsWithFirstHidden[0].hidden = true;
-          const newFocusedCell = handleArrowKeyNavigation({
-            key: ArrowKey.DOWN,
+          const newFocusedCell = UIComponents.DataGridUtils.handleArrowKeyNavigation({
+            key: UIComponents.DataGridUtils.ArrowKey.DOWN,
             currentFocusedCell: [0, 0],
             columns: sortableColumns,
             rows: rowsWithFirstHidden,
@@ -803,8 +862,8 @@ describe('DataGrid', () => {
       it('correctly skips a hidden row while navigating through the body rows', () => {
         const rowsWithSecondHidden = makeRows();
         rowsWithSecondHidden[1].hidden = true;
-        const newFocusedCell = handleArrowKeyNavigation({
-          key: ArrowKey.DOWN,
+        const newFocusedCell = UIComponents.DataGridUtils.handleArrowKeyNavigation({
+          key: UIComponents.DataGridUtils.ArrowKey.DOWN,
           currentFocusedCell: [0, 1],
           columns: makeColumns(),
           rows: rowsWithSecondHidden,
@@ -816,8 +875,8 @@ describe('DataGrid', () => {
         const rowsWithFirstAndSecondHidden = makeRows();
         rowsWithFirstAndSecondHidden[1].hidden = true;
         rowsWithFirstAndSecondHidden[2].hidden = true;
-        const newFocusedCell = handleArrowKeyNavigation({
-          key: ArrowKey.DOWN,
+        const newFocusedCell = UIComponents.DataGridUtils.handleArrowKeyNavigation({
+          key: UIComponents.DataGridUtils.ArrowKey.DOWN,
           currentFocusedCell: [0, 1],
           columns: makeColumns(),
           rows: rowsWithFirstAndSecondHidden,
@@ -834,8 +893,8 @@ describe('DataGrid', () => {
           col.sortable = true;
           return col;
         });
-        const newFocusedCell = handleArrowKeyNavigation({
-          key: ArrowKey.DOWN,
+        const newFocusedCell = UIComponents.DataGridUtils.handleArrowKeyNavigation({
+          key: UIComponents.DataGridUtils.ArrowKey.DOWN,
           currentFocusedCell: [0, 0],
           columns: sortableColumns,
           rows: rowsAllHidden,
@@ -844,8 +903,8 @@ describe('DataGrid', () => {
       });
 
       it('does not let the user move down if they are on the last row', () => {
-        const newFocusedCell = handleArrowKeyNavigation({
-          key: ArrowKey.DOWN,
+        const newFocusedCell = UIComponents.DataGridUtils.handleArrowKeyNavigation({
+          key: UIComponents.DataGridUtils.ArrowKey.DOWN,
           currentFocusedCell: [0, 3],
           columns: makeColumns(),
           rows: makeRows(),

@@ -16,6 +16,7 @@ import './MetricsSidebarPane.js';
 import './PlatformFontsWidget.js';
 import './PropertiesWidget.js';
 import './NodeStackTraceWidget.js';
+import './NodeText.js';
 import './StylePropertyHighlighter.js';
 import './StylesSidebarPane.js';
 import './StylePropertyTreeElement.js';
@@ -35,6 +36,8 @@ import * as ComputedStyleWidget from './ComputedStyleWidget.js';
 import * as CSSPropertyIconResolver from './CSSPropertyIconResolver.js';
 import * as DOMLinkifier from './DOMLinkifier.js';
 import * as DOMPath from './DOMPath.js';
+import * as ElementsBreadcrumbs from './ElementsBreadcrumbs.js';
+import * as ElementsBreadcrumbsUtils from './ElementsBreadcrumbsUtils.js';
 import * as ElementsPanel from './ElementsPanel.js';
 import * as ElementsPanelLink from './ElementsPanelLink_bridge.js';
 import * as ElementsSidebarPane from './ElementsSidebarPane.js';
@@ -46,6 +49,7 @@ import * as EventListenersWidget from './EventListenersWidget.js';
 import * as Icon from './Icon_bridge.js';
 import * as InspectElementModeController from './InspectElementModeController.js';
 import * as LayoutPane from './LayoutPane.js';
+import * as LayoutPaneUtils from './LayoutPaneUtils.js';
 import * as LayoutSidebarPane from './LayoutSidebarPane.js';
 import * as MarkerDecorator from './MarkerDecorator.js';
 import * as MetricsSidebarPane from './MetricsSidebarPane.js';
@@ -68,6 +72,8 @@ export {
   CSSPropertyIconResolver,
   DOMLinkifier,
   DOMPath,
+  ElementsBreadcrumbs,
+  ElementsBreadcrumbsUtils,
   ElementsPanel,
   ElementsPanelLink,
   ElementsSidebarPane,
@@ -79,6 +85,7 @@ export {
   Icon,
   InspectElementModeController,
   LayoutPane,
+  LayoutPaneUtils,
   LayoutSidebarPane,
   MarkerDecorator,
   MetricsSidebarPane,

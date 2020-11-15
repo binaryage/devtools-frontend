@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import type {SettingChangedEvent} from '../../../../front_end/elements/LayoutPane.js';
+import type * as ElementsModule from '../../../../front_end/elements/elements.js';
 import {describeWithEnvironment} from '../helpers/EnvironmentHelpers.js';
-import {SettingType} from '../../../../front_end/elements/LayoutPaneUtils.js';
 import {assertElement, assertShadowRoot, getEventPromise, renderElementIntoDOM} from '../helpers/DOMHelpers.js';
 
 const {assert} = chai;
 
 describeWithEnvironment('LayoutPane', async () => {
-  const Elements = await import('../../../../front_end/elements/elements.js');
+  let Elements: typeof ElementsModule;
+  before(async () => {
+    Elements = await import('../../../../front_end/elements/elements.js');
+  });
 
   function queryLabels(component: HTMLElement, selector: string) {
     assertShadowRoot(component.shadowRoot);
@@ -31,7 +33,7 @@ describeWithEnvironment('LayoutPane', async () => {
       settings: [
         {
           name: 'booleanSetting',
-          type: SettingType.BOOLEAN,
+          type: Elements.LayoutPaneUtils.SettingType.BOOLEAN,
           value: false,
           title: 'Boolean setting title',
           options: [
@@ -47,7 +49,7 @@ describeWithEnvironment('LayoutPane', async () => {
         },
         {
           name: 'enumSetting',
-          type: SettingType.ENUM,
+          type: Elements.LayoutPaneUtils.SettingType.ENUM,
           value: 'both',
           title: 'Enum setting title',
           options: [
@@ -79,7 +81,7 @@ describeWithEnvironment('LayoutPane', async () => {
       settings: [
         {
           name: 'booleanSetting',
-          type: SettingType.BOOLEAN,
+          type: Elements.LayoutPaneUtils.SettingType.BOOLEAN,
           value: false,
           title: 'Boolean setting title',
           options: [
@@ -101,7 +103,7 @@ describeWithEnvironment('LayoutPane', async () => {
     const input = component.shadowRoot.querySelector('[data-input]');
     assertElement(input, HTMLInputElement);
 
-    const eventPromise = getEventPromise<SettingChangedEvent>(component, 'setting-changed');
+    const eventPromise = getEventPromise<ElementsModule.LayoutPane.SettingChangedEvent>(component, 'setting-changed');
 
     input.click();
 

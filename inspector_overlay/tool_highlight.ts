@@ -30,13 +30,14 @@
 
 import {contrastRatio, rgbaToHsla} from '../front_end/common/ColorUtils.js';
 
-import {Bounds, constrainNumber, createChild, createElement, createTextChild, ellipsify, Overlay, ResetData} from './common.js';
+import {Bounds, constrainNumber, createChild, createElement, createTextChild, ellipsify, Overlay, PathCommands, ResetData} from './common.js';
 import {buildPath, emptyBounds, PathBounds} from './highlight_common.js';
+import {drawLayoutFlexContainerHighlight, FlexContainerHighlight} from './highlight_flex_common.js';
 import {drawLayoutGridHighlight, GridHighlight} from './highlight_grid_common.js';
 import {HighlightGridOverlay} from './tool_grid.js';
 
 interface Path {
-  path: Array<string|number>, outlineColor: string;
+  path: PathCommands, outlineColor: string;
   fillColor: string;
   name: string;
 }
@@ -61,22 +62,6 @@ interface ElementInfo {
   accessibleName: string;
   accessibleRole: string;
   layoutObjectName?: string;
-}
-
-enum LinePattern {
-  Solid,
-  Dotted,
-  Dashed
-}
-
-interface LineStyle {
-  color?: string;
-  pattern?: LinePattern;
-}
-
-interface FlexContainerHighlight {
-  containerBorder: Array<string|number>;
-  flexContainerHighlightConfig: {containerBorder?: LineStyle;}
 }
 
 interface Highlight {
@@ -628,7 +613,7 @@ function _drawElementTitle(
 }
 
 function drawPath(
-    context: CanvasRenderingContext2D, commands: Array<string|number>, fillColor: string|undefined,
+    context: CanvasRenderingContext2D, commands: PathCommands, fillColor: string|undefined,
     outlineColor: string|undefined, bounds: PathBounds, emulationScaleFactor: number) {
   context.save();
   const path = buildPath(commands, bounds, emulationScaleFactor);
@@ -693,27 +678,4 @@ function drawRulers(
   }
 
   context.restore();
-}
-
-function drawLayoutFlexContainerHighlight(
-    highlight: FlexContainerHighlight, context: CanvasRenderingContext2D, deviceScaleFactor: number,
-    canvasWidth: number, canvasHeight: number, emulationScaleFactor: number) {
-  const config = highlight.flexContainerHighlightConfig;
-  const bounds = emptyBounds();
-  const borderPath = buildPath(highlight.containerBorder, bounds, emulationScaleFactor);
-
-  if (config.containerBorder && config.containerBorder.color) {
-    context.save();
-    context.translate(0.5, 0.5);
-    context.lineWidth = 1;
-    if (config.containerBorder.pattern === LinePattern.Dashed) {
-      context.setLineDash([3, 3]);
-    }
-    if (config.containerBorder.pattern === LinePattern.Dotted) {
-      context.setLineDash([2, 2]);
-    }
-    context.strokeStyle = config.containerBorder.color;
-    context.stroke(borderPath);
-    context.restore();
-  }
 }

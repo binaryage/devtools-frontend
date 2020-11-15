@@ -2,11 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import {LinearMemoryInspector} from '../../../../front_end/linear_memory_inspector/LinearMemoryInspector.js';
-import {toHexString} from '../../../../front_end/linear_memory_inspector/LinearMemoryInspectorUtils.js';
-import {LinearMemoryNavigator} from '../../../../front_end/linear_memory_inspector/LinearMemoryNavigator.js';
-import {LinearMemoryValueInterpreter} from '../../../../front_end/linear_memory_inspector/LinearMemoryValueInterpreter.js';
-import {ByteSelectedEvent, LinearMemoryViewer} from '../../../../front_end/linear_memory_inspector/LinearMemoryViewer.js';
+import * as LinearMemoryInspector from '../../../../front_end/linear_memory_inspector/linear_memory_inspector.js';
 import {getElementsWithinComponent, getElementWithinComponent, getEventPromise, renderElementIntoDOM} from '../helpers/DOMHelpers.js';
 
 import {NAVIGATOR_ADDRESS_SELECTOR, NAVIGATOR_HISTORY_BUTTON_SELECTOR, NAVIGATOR_PAGE_BUTTON_SELECTOR} from './LinearMemoryNavigator_test.js';
@@ -19,20 +15,24 @@ const VIEWER_SELECTOR = 'devtools-linear-memory-inspector-viewer';
 const INTERPRETER_SELECTOR = 'devtools-linear-memory-inspector-interpreter';
 
 describe('LinearMemoryInspector', () => {
-  function getViewer(component: LinearMemoryInspector) {
-    return getElementWithinComponent(component, VIEWER_SELECTOR, LinearMemoryViewer);
+  function getViewer(component: LinearMemoryInspector.LinearMemoryInspector.LinearMemoryInspector) {
+    return getElementWithinComponent(
+        component, VIEWER_SELECTOR, LinearMemoryInspector.LinearMemoryViewer.LinearMemoryViewer);
   }
 
-  function getNavigator(component: LinearMemoryInspector) {
-    return getElementWithinComponent(component, NAVIGATOR_SELECTOR, LinearMemoryNavigator);
+  function getNavigator(component: LinearMemoryInspector.LinearMemoryInspector.LinearMemoryInspector) {
+    return getElementWithinComponent(
+        component, NAVIGATOR_SELECTOR, LinearMemoryInspector.LinearMemoryNavigator.LinearMemoryNavigator);
   }
 
-  function getValueInterpreter(component: LinearMemoryInspector) {
-    return getElementWithinComponent(component, INTERPRETER_SELECTOR, LinearMemoryValueInterpreter);
+  function getValueInterpreter(component: LinearMemoryInspector.LinearMemoryInspector.LinearMemoryInspector) {
+    return getElementWithinComponent(
+        component, INTERPRETER_SELECTOR,
+        LinearMemoryInspector.LinearMemoryValueInterpreter.LinearMemoryValueInterpreter);
   }
 
   function setUpComponent() {
-    const component = new LinearMemoryInspector();
+    const component = new LinearMemoryInspector.LinearMemoryInspector.LinearMemoryInspector();
 
     const flexWrapper = document.createElement('div');
     flexWrapper.style.width = '500px';
@@ -49,6 +49,7 @@ describe('LinearMemoryInspector', () => {
     const data = {
       memory: new Uint8Array(memory),
       address: 20,
+      memoryOffset: 0,
     };
     component.data = data;
 
@@ -87,7 +88,8 @@ describe('LinearMemoryInspector', () => {
     const historyLength = Math.min(byteCells.length, 10);
 
     for (let i = 0; i < historyLength; ++i) {
-      const byteSelectedPromise = getEventPromise<ByteSelectedEvent>(viewer, 'byte-selected');
+      const byteSelectedPromise =
+          getEventPromise<LinearMemoryInspector.LinearMemoryViewer.ByteSelectedEvent>(viewer, 'byte-selected');
       byteCells[i].click();
       const byteSelectedEvent = await byteSelectedPromise;
       visitedByteValue.push(byteSelectedEvent.data);
@@ -119,7 +121,8 @@ describe('LinearMemoryInspector', () => {
     const addressBefore = parseInt(address.value, 16);
 
     const viewer = getViewer(component);
-    let numBytesPerPage = viewer.getNumBytesPerPage();
+    const bytesShown = await getElementsWithinComponent(viewer, VIEWER_BYTE_CELL_SELECTOR, HTMLSpanElement);
+    const numBytesPerPage = bytesShown.length;
 
     forwardButton.click();
     let addressAfter = parseInt(address.value, 16);
@@ -128,10 +131,6 @@ describe('LinearMemoryInspector', () => {
 
     backwardButton.click();
     addressAfter = parseInt(address.value, 16);
-    // The number of bytes per page can change since we render twice: once
-    // initially to estimate how much we can fit, and then rendering to fit
-    // the assigned size, so we need to re-retrieve it.
-    numBytesPerPage = viewer.getNumBytesPerPage();
     expectedAddressAfter -= numBytesPerPage;
     assert.strictEqual(addressAfter, Math.max(0, expectedAddressAfter));
   });
@@ -151,11 +150,11 @@ describe('LinearMemoryInspector', () => {
 
   it('formats a hexadecimal number', async () => {
     const number = 23;
-    assert.strictEqual(toHexString(number, 0), '17');
+    assert.strictEqual(LinearMemoryInspector.LinearMemoryInspectorUtils.toHexString(number, 0), '17');
   });
 
   it('formats a hexadecimal number and adds padding', async () => {
     const decimalNumber = 23;
-    assert.strictEqual(toHexString(decimalNumber, 5), '00017');
+    assert.strictEqual(LinearMemoryInspector.LinearMemoryInspectorUtils.toHexString(decimalNumber, 5), '00017');
   });
 });
