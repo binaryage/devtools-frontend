@@ -47,6 +47,10 @@ export class DebuggerWorkspaceBinding {
 
     /** @type {!Set.<!Promise<?>>} */
     this._liveLocationPromises = new Set();
+
+    this.pluginManager = Root.Runtime.experiments.isEnabled('wasmDWARFDebugging') ?
+        new DebuggerLanguagePluginManager(targetManager, workspace, this) :
+        null;
   }
 
   /**
@@ -74,11 +78,68 @@ export class DebuggerWorkspaceBinding {
   }
 
   /**
+   * @param {!SDK.DebuggerModel.StepMode} mode
+   * @param {!SDK.DebuggerModel.CallFrame} callFrame
+   * @return {!Promise<!Array<!{start:!SDK.DebuggerModel.Location, end:!SDK.DebuggerModel.Location}>>}
+   */
+  async _computeAutoStepRanges(mode, callFrame) {
+    /**
+     * @param {!SDK.DebuggerModel.Location} location
+     * @param {!{start:!SDK.DebuggerModel.Location, end:!SDK.DebuggerModel.Location}} range
+     * @return {boolean}
+     */
+    function contained(location, range) {
+      const {start, end} = range;
+      if (start.scriptId !== location.scriptId) {
+        return false;
+      }
+      if (location.lineNumber < start.lineNumber || location.lineNumber > end.lineNumber) {
+        return false;
+      }
+      if (location.lineNumber === start.lineNumber && location.columnNumber < start.columnNumber) {
+        return false;
+      }
+      if (location.lineNumber === end.lineNumber && location.columnNumber >= end.columnNumber) {
+        return false;
+      }
+      return true;
+    }
+
+    // TODO(crbug.com/1018234): Also take into account source maps here and remove the auto-stepping
+    // logic in the front-end (which is currently still an experiment) completely.
+    const pluginManager = this.pluginManager;
+    if (pluginManager) {
+      const rawLocation = callFrame.location();
+      if (mode === SDK.DebuggerModel.StepMode.StepOut) {
+        // Step out of inline function.
+        return await pluginManager.getInlinedFunctionRanges(rawLocation);
+      }
+      /** @type {!Array<!{start:!SDK.DebuggerModel.Location, end:!SDK.DebuggerModel.Location}>} */
+      let ranges = [];
+      const uiLocation = await pluginManager.rawLocationToUILocation(rawLocation);
+      if (uiLocation) {
+        ranges = await pluginManager.uiLocationToRawLocationRanges(
+                     uiLocation.uiSourceCode, uiLocation.lineNumber, uiLocation.columnNumber) ||
+            [];
+        // TODO(bmeurer): Remove the {rawLocation} from the {ranges}?
+        ranges = ranges.filter(range => contained(rawLocation, range));
+      }
+      if (mode === SDK.DebuggerModel.StepMode.StepOver) {
+        // Step over an inlined function.
+        ranges = ranges.concat(await pluginManager.getInlinedCalleesRanges(rawLocation));
+      }
+      return ranges;
+    }
+    return [];
+  }
+
+  /**
    * @override
    * @param {!SDK.DebuggerModel.DebuggerModel} debuggerModel
    */
   modelAdded(debuggerModel) {
     this._debuggerModelToData.set(debuggerModel, new ModelData(debuggerModel, this));
+    debuggerModel.setComputeAutoStepRangesCallback(this._computeAutoStepRanges.bind(this));
   }
 
   /**
@@ -86,23 +147,12 @@ export class DebuggerWorkspaceBinding {
    * @param {!SDK.DebuggerModel.DebuggerModel} debuggerModel
    */
   modelRemoved(debuggerModel) {
+    debuggerModel.setComputeAutoStepRangesCallback(null);
     const modelData = this._debuggerModelToData.get(debuggerModel);
     if (modelData) {
       modelData._dispose();
       this._debuggerModelToData.delete(debuggerModel);
     }
-  }
-
-  /**
-   * @param {!SDK.DebuggerModel.DebuggerModel} debuggerModel
-   * @return {?DebuggerLanguagePluginManager}
-   */
-  getLanguagePluginManager(debuggerModel) {
-    const modelData = this._debuggerModelToData.get(debuggerModel);
-    if (!modelData) {
-      return null;
-    }
-    return modelData.pluginManager;
   }
 
   /**
@@ -204,6 +254,12 @@ export class DebuggerWorkspaceBinding {
         return uiLocation;
       }
     }
+    if (this.pluginManager) {
+      const uiLocation = await this.pluginManager.rawLocationToUILocation(rawLocation);
+      if (uiLocation) {
+        return uiLocation;
+      }
+    }
     const modelData = this._debuggerModelToData.get(rawLocation.debuggerModel);
     return modelData ? modelData._rawLocationToUILocation(rawLocation) : null;
   }
@@ -234,12 +290,22 @@ export class DebuggerWorkspaceBinding {
         return locations;
       }
     }
-
-    const locationsPromises = [];
-    for (const modelData of this._debuggerModelToData.values()) {
-      locationsPromises.push(modelData._uiLocationToRawLocations(uiSourceCode, lineNumber, columnNumber));
+    // TODO(bmeurer): This is more complicated than it needs to be, because
+    // only the pluginManager part below needs to be asynchronous and any
+    // given uiSourceCode cannot be provided by both a plugin and another
+    // mean of source mapping. Yet, there's currently a subtle timing issue
+    // with http/tests/devtools/sources/debugger-ui/click-gutter-breakpoint.js
+    // and so for now we leave the promises in here.
+    const locationPromises = [];
+    if (this.pluginManager) {
+      locationPromises.push(this.pluginManager.uiLocationToRawLocations(uiSourceCode, lineNumber, columnNumber)
+                                .then(locations => locations || []));
     }
-    return (await Promise.all(locationsPromises)).flat();
+    for (const modelData of this._debuggerModelToData.values()) {
+      locationPromises.push(
+          Promise.resolve(modelData._uiLocationToRawLocations(uiSourceCode, lineNumber, columnNumber)));
+    }
+    return (await Promise.all(locationPromises)).flat();
   }
 
   /**
@@ -252,7 +318,7 @@ export class DebuggerWorkspaceBinding {
     console.assert(uiSourceCode.contentType().isScript());
     const locations = [];
     for (const modelData of this._debuggerModelToData.values()) {
-      locations.push(...modelData._uiLocationToRawLocationsExcludeAsync(uiSourceCode, lineNumber, columnNumber));
+      locations.push(...modelData._uiLocationToRawLocations(uiSourceCode, lineNumber, columnNumber));
     }
     return locations;
   }
@@ -289,10 +355,10 @@ export class DebuggerWorkspaceBinding {
    */
   scriptsForUISourceCode(uiSourceCode) {
     const scripts = new Set();
+    if (this.pluginManager) {
+      this.pluginManager.scriptsForUISourceCode(uiSourceCode).forEach(script => scripts.add(script));
+    }
     for (const modelData of this._debuggerModelToData.values()) {
-      if (modelData._pluginManager) {
-        modelData._pluginManager.scriptsForUISourceCode(uiSourceCode).forEach(script => scripts.add(script));
-      }
       const resourceScriptFile = modelData._resourceMapping.scriptFile(uiSourceCode);
       if (resourceScriptFile && resourceScriptFile._script) {
         scripts.add(resourceScriptFile._script);
@@ -395,12 +461,6 @@ class ModelData {
     this.callFrameLocations = new Set();
 
     const workspace = debuggerWorkspaceBinding._workspace;
-
-    if (Root.Runtime.experiments.isEnabled('wasmDWARFDebugging')) {
-      this._pluginManager = new DebuggerLanguagePluginManager(debuggerModel, workspace, debuggerWorkspaceBinding);
-    }
-
-
     this._defaultMapping = new DefaultScriptMapping(debuggerModel, workspace, debuggerWorkspaceBinding);
     this._resourceMapping = new ResourceScriptMapping(debuggerModel, workspace, debuggerWorkspaceBinding);
     this._compilerMapping = new CompilerScriptMapping(debuggerModel, workspace, debuggerWorkspaceBinding);
@@ -409,13 +469,6 @@ class ModelData {
     this._locations = new Platform.Multimap();
 
     debuggerModel.setBeforePausedCallback(this._beforePaused.bind(this));
-  }
-
-  /**
-   * return {?DebuggerLanguagePluginManager}
-   */
-  get pluginManager() {
-    return this._pluginManager || null;
   }
 
   /**
@@ -453,14 +506,10 @@ class ModelData {
 
   /**
    * @param {!SDK.DebuggerModel.Location} rawLocation
-   * @return {!Promise<?Workspace.UISourceCode.UILocation>}
+   * @return {?Workspace.UISourceCode.UILocation}
    */
-  async _rawLocationToUILocation(rawLocation) {
-    let uiLocation = null;
-    if (this._pluginManager) {
-      uiLocation = await this._pluginManager.rawLocationToUILocation(rawLocation);
-    }
-    uiLocation = uiLocation || this._compilerMapping.rawLocationToUILocation(rawLocation);
+  _rawLocationToUILocation(rawLocation) {
+    let uiLocation = this._compilerMapping.rawLocationToUILocation(rawLocation);
     uiLocation = uiLocation || this._resourceMapping.rawLocationToUILocation(rawLocation);
     uiLocation = uiLocation || ResourceMapping.instance().jsLocationToUILocation(rawLocation);
     uiLocation = uiLocation || this._defaultMapping.rawLocationToUILocation(rawLocation);
@@ -471,24 +520,9 @@ class ModelData {
    * @param {!Workspace.UISourceCode.UISourceCode} uiSourceCode
    * @param {number} lineNumber
    * @param {number} columnNumber
-   * @return {!Promise<!Array<!SDK.DebuggerModel.Location>>}
-   */
-  async _uiLocationToRawLocations(uiSourceCode, lineNumber, columnNumber) {
-    let rawLocations = null;
-    if (this._pluginManager) {
-      rawLocations = await this._pluginManager.uiLocationToRawLocations(uiSourceCode, lineNumber, columnNumber);
-    }
-    rawLocations = rawLocations || this._uiLocationToRawLocationsExcludeAsync(uiSourceCode, lineNumber, columnNumber);
-    return rawLocations;
-  }
-
-  /**
-   * @param {!Workspace.UISourceCode.UISourceCode} uiSourceCode
-   * @param {number} lineNumber
-   * @param {number} columnNumber
    * @return {!Array<!SDK.DebuggerModel.Location>}
    */
-  _uiLocationToRawLocationsExcludeAsync(uiSourceCode, lineNumber, columnNumber) {
+  _uiLocationToRawLocations(uiSourceCode, lineNumber, columnNumber) {
     let locations = this._compilerMapping.uiLocationToRawLocations(uiSourceCode, lineNumber, columnNumber);
     locations = locations.length ?
         locations :

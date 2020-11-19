@@ -47,7 +47,7 @@ export class MemoryRequestEvent extends Event {
   data: {start: number, end: number, address: number};
 
   constructor(start: number, end: number, address: number) {
-    super('memoryRequest');
+    super('memory-request');
     this.data = {start, end, address};
   }
 }
@@ -59,7 +59,7 @@ export class LinearMemoryInspector extends HTMLElement {
   private memoryOffset = 0;
   private address = 0;
   private numBytesPerPage = 4;
-  private valueTypes: Set<ValueType> = new Set([ValueType.Int8, ValueType.Float32, ValueType.Boolean]);
+  private valueTypes: Set<ValueType> = new Set([ValueType.Int8, ValueType.Float32]);
 
   set data(data: LinearMemoryInspectorData) {
     if (data.address < data.memoryOffset || data.address > data.memoryOffset + data.memory.length || data.address < 0) {
@@ -88,8 +88,9 @@ export class LinearMemoryInspector extends HTMLElement {
         }
 
         .view {
+          width: 100%;
           display: flex;
-          flex: auto;
+          flex: 1;
           flex-direction: column;
           font-family: monospace;
           padding: 9px 12px 9px 7px;

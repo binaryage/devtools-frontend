@@ -40,6 +40,29 @@ export async function openFileInSourcesPanel(testInput: string) {
   await openSourcesPanel();
 }
 
+export async function openRecorderSubPane() {
+  const root = await waitFor('.navigator-tabbed-pane');
+
+  await waitFor('[aria-label="More tabs"]', root);
+  await click('[aria-label="More tabs"]', {root});
+
+  await waitFor('[aria-label="Recordings"]');
+
+  await click('[aria-label="Recordings"]');
+  await waitFor('[aria-label="Add recording"]');
+}
+
+export async function createNewRecording(recordingName: string) {
+  const {frontend} = getBrowserAndPages();
+
+  await click('[aria-label="Add recording"]');
+  await waitFor('[aria-label^="Recording"]');
+
+  await typeText(recordingName);
+
+  await frontend.keyboard.press('Enter');
+}
+
 export async function openSnippetsSubPane() {
   const root = await waitFor('.navigator-tabbed-pane');
 
@@ -281,7 +304,7 @@ export function clearSourceFilesAdded(frontend: puppeteer.Page) {
 
 export function retrieveSourceFilesAdded(frontend: puppeteer.Page) {
   // Strip hostname, to make it agnostic of which server port we use
-  return frontend.evaluate(() => window.__sourceFilesAddedEvents.map(file => new URL(`http://${file}`).pathname));
+  return frontend.evaluate(() => window.__sourceFilesAddedEvents.map(file => new URL(`https://${file}`).pathname));
 }
 
 // Helpers for navigating the file tree.
@@ -386,4 +409,15 @@ export async function getValuesForScope(scope: string, expandCount = 0, waitForN
   });
   const values = await Promise.all(valueSelectorElements.map(elem => elem.evaluate(n => n.textContent as string)));
   return values;
+}
+
+export async function getPausedMessages() {
+  const {frontend} = getBrowserAndPages();
+  const messageElement = await frontend.waitForSelector('.paused-message');
+  const statusMain = await waitFor('.status-main', messageElement);
+  const statusSub = await waitFor('.status-sub', messageElement);
+  return {
+    statusMain: await statusMain.evaluate(x => x.textContent),
+    statusSub: await statusSub.evaluate(x => x.textContent),
+  };
 }

@@ -1021,6 +1021,12 @@ declare namespace ProtocolProxyApi {
         Promise<Protocol.ProtocolResponseWithError>;
 
     /**
+     * Sets breakpoint on particular CSP violations.
+     */
+    invoke_setBreakOnCSPViolation(params: Protocol.DOMDebugger.SetBreakOnCSPViolationRequest):
+        Promise<Protocol.ProtocolResponseWithError>;
+
+    /**
      * Sets breakpoint on particular operation with DOM.
      */
     invoke_setDOMBreakpoint(params: Protocol.DOMDebugger.SetDOMBreakpointRequest):
@@ -2016,6 +2022,9 @@ declare namespace ProtocolProxyApi {
      * Highlight multiple elements with the CSS Grid overlay.
      */
     invoke_setShowGridOverlays(params: Protocol.Overlay.SetShowGridOverlaysRequest):
+        Promise<Protocol.ProtocolResponseWithError>;
+
+    invoke_setShowFlexOverlays(params: Protocol.Overlay.SetShowFlexOverlaysRequest):
         Promise<Protocol.ProtocolResponseWithError>;
 
     /**

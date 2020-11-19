@@ -105,6 +105,22 @@ ElementsTestRunner.findNodePromise = function(matchFunction) {
   return new Promise(resolve => ElementsTestRunner.findNode(matchFunction, resolve));
 };
 
+
+/**
+ * @param {!UI.TreeOutline.TreeElement} treeElement
+ */
+function dumpObjectPropertyTreeElement(treeElement) {
+  const expandedSubstring = treeElement.expanded ? '[expanded]' : '[collapsed]';
+  TestRunner.addResult(expandedSubstring + ' ' + treeElement.listItemElement.deepTextContent());
+
+  for (const child of treeElement.children()) {
+    const property = /** @type {!ObjectUI.ObjectPropertiesSection.ObjectPropertyTreeElement} */ (child).property;
+    const key = property.name;
+    const value = /** @type {!SDK.RemoteObject.RemoteObjectImpl} */ (property.value)._description;
+    TestRunner.addResult('    ' + key + ': ' + value);
+  }
+}
+
 /**
  * @param {!EventListeners.EventListenersView} eventListenersView
  * @param {function():void} callback
@@ -135,7 +151,7 @@ ElementsTestRunner.expandAndDumpEventListeners = function(eventListenersView, ca
       const listenerItems = listenerTypes[i].children();
       for (let j = 0; j < listenerItems.length; ++j) {
         TestRunner.addResult('== ' + listenerItems[j].eventListener().origin());
-        TestRunner.dumpObjectPropertyTreeElement(listenerItems[j]);
+        dumpObjectPropertyTreeElement(listenerItems[j]);
       }
     }
     callback();
@@ -523,7 +539,7 @@ async function extractLinkText(element) {
   }
 
   const anchorText = anchor.textContent;
-  const info = Components.Linkifier._linkInfo(anchor);
+  const info = Components.Linkifier.linkInfo(anchor);
   const uiLocation = info && info.uiLocation;
   const anchorTarget =
       (uiLocation ?

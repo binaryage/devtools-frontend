@@ -134,6 +134,7 @@ interface Document {
 
 interface HTMLElement {
   createChild(tagName: string, className?: string, content?: string): HTMLElement;
+  totalOffset(): {left: number, top: number};
 }
 
 interface Element {
@@ -178,6 +179,7 @@ interface Node {
 }
 
 declare function base64ToSize(content: string|null): number;
+declare function unescapeCssString(input: string|null): string;
 declare function isEnterKey(event: Event): boolean;
 declare function isEnterOrSpaceKey(event: Event): boolean;
 declare function isEscKey(event: Event): boolean;

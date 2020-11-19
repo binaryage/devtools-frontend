@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import * as UIComponents from '../../../../../front_end/ui/components/components.js';  // eslint-disable-line rulesdir/es_modules_import
+import * as UIComponents from '../../../../../front_end/ui/components/components.js';
 import {assertNotNull, assertShadowRoot, dispatchClickEvent, renderElementIntoDOM} from '../../helpers/DOMHelpers.js';
 import {TEXT_NODE, withMutations, withNoMutations} from '../../helpers/MutationHelpers.js';
 import {getAllRows, getHeaderCellForColumnId, getValuesForColumn, getValuesOfAllBodyRows} from './DataGridHelpers.js';
@@ -29,6 +29,11 @@ describe('DataGridController', () => {
       {cells: [{columnId: 'key', value: 'Alpha'}]},
       {cells: [{columnId: 'key', value: 'Charlie'}]},
     ];
+    const numericRows = [
+      {cells: [{columnId: 'key', value: 2}]},
+      {cells: [{columnId: 'key', value: 1}]},
+      {cells: [{columnId: 'key', value: 3}]},
+    ];
 
     it('lets the user click to sort the column in ASC order', async () => {
       const component = new UIComponents.DataGridController.DataGridController();
@@ -52,6 +57,66 @@ describe('DataGridController', () => {
             const cellValues = getValuesForColumn(shadowRoot, 'key');
             assert.deepEqual(cellValues, ['Alpha', 'Bravo', 'Charlie']);
           });
+    });
+
+    it('supports sorting numeric columns', async () => {
+      const component = new UIComponents.DataGridController.DataGridController();
+      component.data = {rows: numericRows, columns};
+
+      renderElementIntoDOM(component);
+      assertShadowRoot(component.shadowRoot);
+
+      const internalDataGridShadow = getInternalDataGridShadowRoot(component);
+
+      const keyHeader = getHeaderCellForColumnId(internalDataGridShadow, 'key');
+      dispatchClickEvent(keyHeader);  // ASC order
+      let cellValues = getValuesForColumn(internalDataGridShadow, 'key');
+      assert.deepEqual(cellValues, ['1', '2', '3']);
+      dispatchClickEvent(keyHeader);  // DESC order
+      cellValues = getValuesForColumn(internalDataGridShadow, 'key');
+      assert.deepEqual(cellValues, ['3', '2', '1']);
+    });
+
+    it('can be provided an initial sort which is immediately applied', async () => {
+      const component = new UIComponents.DataGridController.DataGridController();
+      component.data = {
+        rows,
+        columns,
+        initialSort: {
+          columnId: 'key',
+          direction: UIComponents.DataGridUtils.SortDirection.ASC,
+        },
+      };
+
+      renderElementIntoDOM(component);
+      assertShadowRoot(component.shadowRoot);
+
+      const internalDataGridShadow = getInternalDataGridShadowRoot(component);
+      const cellValues = getValuesForColumn(internalDataGridShadow, 'key');
+      assert.deepEqual(cellValues, ['Alpha', 'Bravo', 'Charlie']);
+    });
+
+    it('lets the user click to change the sort when it is initially provided', async () => {
+      const component = new UIComponents.DataGridController.DataGridController();
+      component.data = {
+        rows,
+        columns,
+        initialSort: {
+          columnId: 'key',
+          direction: UIComponents.DataGridUtils.SortDirection.ASC,
+        },
+      };
+
+      renderElementIntoDOM(component);
+      assertShadowRoot(component.shadowRoot);
+
+      const internalDataGridShadow = getInternalDataGridShadowRoot(component);
+      const keyHeader = getHeaderCellForColumnId(internalDataGridShadow, 'key');
+      let cellValues = getValuesForColumn(internalDataGridShadow, 'key');
+      assert.deepEqual(cellValues, ['Alpha', 'Bravo', 'Charlie']);
+      dispatchClickEvent(keyHeader);  // DESC order
+      cellValues = getValuesForColumn(internalDataGridShadow, 'key');
+      assert.deepEqual(cellValues, ['Charlie', 'Bravo', 'Alpha']);
     });
 
     it('lets the user click twice to sort the column in DESC order', () => {
@@ -99,9 +164,24 @@ describe('DataGridController', () => {
       {id: 'value', title: 'Phonetic', sortable: true, widthWeighting: 1},
     ];
     const rows = [
-      {cells: [{columnId: 'key', value: 'Letter A'}, {columnId: 'value', value: 'Alpha'}]},
-      {cells: [{columnId: 'key', value: 'Letter B'}, {columnId: 'value', value: 'Bravo'}]},
-      {cells: [{columnId: 'key', value: 'Letter C'}, {columnId: 'value', value: 'Charlie'}]},
+      {
+        cells: [
+          {columnId: 'key', value: 'Letter A'},
+          {columnId: 'value', value: 'Alpha'},
+        ],
+      },
+      {
+        cells: [
+          {columnId: 'key', value: 'Letter B'},
+          {columnId: 'value', value: 'Bravo'},
+        ],
+      },
+      {
+        cells: [
+          {columnId: 'key', value: 'Letter C'},
+          {columnId: 'value', value: 'Charlie'},
+        ],
+      },
     ];
 
     it('only shows rows with values that match the filter', () => {

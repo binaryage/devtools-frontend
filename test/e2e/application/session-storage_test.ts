@@ -12,7 +12,8 @@ let DOMAIN_SELECTOR: string;
 
 describe('The Application Tab', async () => {
   before(async () => {
-    DOMAIN_SELECTOR = `${SESSION_STORAGE_SELECTOR} + ol > [aria-label="http://localhost:${getHostedModeServerPort()}"]`;
+    DOMAIN_SELECTOR =
+        `${SESSION_STORAGE_SELECTOR} + ol > [aria-label="https://localhost:${getHostedModeServerPort()}"]`;
   });
 
   it('shows Session Storage keys and values', async () => {
@@ -37,10 +38,6 @@ describe('The Application Tab', async () => {
         {
           key: 'secondKey',
           value: '{"field":"complexValue","primitive":2}',
-        },
-        {
-          key: '',
-          value: '',
         },
       ]);
     });

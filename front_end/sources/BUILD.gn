@@ -26,6 +26,7 @@ devtools_module("sources") {
     "OpenFileQuickOpen.js",
     "OutlineQuickOpen.js",
     "Plugin.js",
+    "RecorderPlugin.js",
     "ScopeChainSidebarPane.js",
     "ScriptFormatterEditorAction.js",
     "ScriptOriginPlugin.js",
@@ -53,10 +54,12 @@ devtools_module("sources") {
     "../formatter:bundle",
     "../host:bundle",
     "../inline_editor:bundle",
+    "../linear_memory_inspector:bundle",
     "../object_ui:bundle",
     "../persistence:bundle",
     "../platform:bundle",
     "../quick_open:bundle",
+    "../recorder:bundle",
     "../sdk:bundle",
     "../search:bundle",
     "../snippets:bundle",
@@ -70,7 +73,7 @@ devtools_module("sources") {
 }
 
 devtools_entrypoint("bundle") {
-  entrypoint = "sources.js"
+  entrypoint = "sources.ts"
 
   deps = [ ":sources" ]
 }

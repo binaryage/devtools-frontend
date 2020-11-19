@@ -2,14 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// @ts-nocheck
-// TODO(crbug.com/1011811): Enable TypeScript compiler checks
-
 import * as Common from '../common/common.js';
 import * as TextUtils from '../text_utils/text_utils.js';
 import * as UI from '../ui/ui.js';
-import * as ColorSwatch from './ColorSwatch_bridge.js';
 
+import {ColorSwatch} from './ColorSwatch.js';
 import {CSSShadowModel} from './CSSShadowModel.js';  // eslint-disable-line no-unused-vars
 
 /**
@@ -30,19 +27,20 @@ export class BezierSwatch extends HTMLSpanElement {
    * @return {!BezierSwatch}
    */
   static create() {
-    if (!BezierSwatch._constructor) {
-      BezierSwatch._constructor = UI.Utils.registerCustomElement('span', 'bezier-swatch', BezierSwatch);
+    let constructor = BezierSwatch._constructor;
+    if (!constructor) {
+      constructor = UI.Utils.registerCustomElement('span', 'bezier-swatch', BezierSwatch);
+      BezierSwatch._constructor = constructor;
     }
 
-
-    return /** @type {!BezierSwatch} */ (BezierSwatch._constructor());
+    return /** @type {!BezierSwatch} */ (constructor());
   }
 
   /**
    * @return {string}
    */
   bezierText() {
-    return this._textElement.textContent;
+    return this._textElement.textContent || '';
   }
 
   /**
@@ -67,6 +65,9 @@ export class BezierSwatch extends HTMLSpanElement {
   }
 }
 
+/** @type {?function():!Element} */
+BezierSwatch._constructor = null;
+
 /**
  * @unrestricted
  */
@@ -79,24 +80,28 @@ export class CSSShadowSwatch extends HTMLSpanElement {
     root.appendChild(this._iconElement);
     root.createChild('slot');
     this._contentElement = this.createChild('span');
+
+    /** @type {?ColorSwatch} */
+    this._colorSwatch;
   }
 
   /**
    * @return {!CSSShadowSwatch}
    */
   static create() {
-    if (!CSSShadowSwatch._constructor) {
-      CSSShadowSwatch._constructor = UI.Utils.registerCustomElement('span', 'css-shadow-swatch', CSSShadowSwatch);
+    let constructor = CSSShadowSwatch._constructor;
+    if (!constructor) {
+      constructor = UI.Utils.registerCustomElement('span', 'css-shadow-swatch', CSSShadowSwatch);
     }
 
-    return /** @type {!CSSShadowSwatch} */ (CSSShadowSwatch._constructor());
+    return /** @type {!CSSShadowSwatch} */ (constructor());
   }
 
   /**
-   * @return {!CSSShadowModel} cssShadowModel
+   * @return {!CSSShadowModel}
    */
   model() {
-    return this._model;
+    return /** @type {!CSSShadowModel} */ (this._model);
   }
 
   /**
@@ -110,10 +115,10 @@ export class CSSShadowSwatch extends HTMLSpanElement {
       const result = results[i];
       if (result.regexIndex === 1) {
         if (!this._colorSwatch) {
-          this._colorSwatch = ColorSwatch.createColorSwatch();
+          this._colorSwatch = new ColorSwatch();
           const value = this._colorSwatch.createChild('span');
-          this._colorSwatch.addEventListener('format-changed', event => {
-            value.textContent = event.data.text;
+          this._colorSwatch.addEventListener('format-changed', /** @param {!Event} event */ event => {
+            value.textContent = /** @type {*} */ (event).data.text;
           });
         }
 
@@ -124,7 +129,7 @@ export class CSSShadowSwatch extends HTMLSpanElement {
         }
         this._contentElement.appendChild(this._colorSwatch);
       } else {
-        this._contentElement.appendChild(createTextNode(result.value));
+        this._contentElement.appendChild(document.createTextNode(result.value));
       }
     }
   }
@@ -144,9 +149,12 @@ export class CSSShadowSwatch extends HTMLSpanElement {
   }
 
   /**
-   * @return {?ColorSwatch.ColorSwatchClosureInterface}
+   * @return {?ColorSwatch}
    */
   colorSwatch() {
     return this._colorSwatch;
   }
 }
+
+/** @type {?function():!Element} */
+CSSShadowSwatch._constructor = null;

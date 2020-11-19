@@ -134,6 +134,9 @@ Sources.OutlineQuickOpen = SourcesModule.OutlineQuickOpen.OutlineQuickOpen;
 /** @constructor */
 Sources.ScopeChainSidebarPane = SourcesModule.ScopeChainSidebarPane.ScopeChainSidebarPane;
 
+/** @constructor */
+Sources.ScopeChainSidebarPane.OpenLinearMemoryInspector = SourcesModule.ScopeChainSidebarPane.OpenLinearMemoryInspector;
+
 Sources.ScopeChainSidebarPane._pathSymbol = SourcesModule.ScopeChainSidebarPane.pathSymbol;
 
 /** @constructor */
@@ -152,6 +155,10 @@ Sources.SearchSourcesView.ActionDelegate = SourcesModule.SearchSourcesView.Actio
 
 /** @constructor */
 Sources.SnippetsPlugin = SourcesModule.SnippetsPlugin.SnippetsPlugin;
+
+/** @constructor */
+Sources.RecorderPlugin = SourcesModule.RecorderPlugin.RecorderPlugin;
+
 
 Sources.SourceMapNamesResolver = {};
 
@@ -191,6 +198,9 @@ Sources.ContentScriptsNavigatorView = SourcesModule.SourcesNavigator.ContentScri
 
 /** @constructor */
 Sources.SnippetsNavigatorView = SourcesModule.SourcesNavigator.SnippetsNavigatorView;
+
+/** @constructor */
+Sources.RecordingsNavigatorView = SourcesModule.SourcesNavigator.RecordingsNavigatorView;
 
 /** @constructor */
 Sources.ActionDelegate = SourcesModule.SourcesNavigator.ActionDelegate;

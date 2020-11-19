@@ -5371,6 +5371,16 @@
                     ]
                 },
                 {
+                    "id": "CSPViolationType",
+                    "description": "CSP Violation type.",
+                    "experimental": true,
+                    "type": "string",
+                    "enum": [
+                        "trustedtype-sink-violation",
+                        "trustedtype-policy-violation"
+                    ]
+                },
+                {
                     "id": "EventListener",
                     "description": "Object event listener.",
                     "type": "object",
@@ -5519,6 +5529,21 @@
                             "name": "url",
                             "description": "Resource URL substring.",
                             "type": "string"
+                        }
+                    ]
+                },
+                {
+                    "name": "setBreakOnCSPViolation",
+                    "description": "Sets breakpoint on particular CSP violations.",
+                    "experimental": true,
+                    "parameters": [
+                        {
+                            "name": "violationTypes",
+                            "description": "CSP Violations to stop upon.",
+                            "type": "array",
+                            "items": {
+                                "$ref": "CSPViolationType"
+                            }
                         }
                     ]
                 },
@@ -12224,6 +12249,30 @@
                             "description": "The style of the separator between items",
                             "optional": true,
                             "$ref": "LineStyle"
+                        },
+                        {
+                            "name": "mainDistributedSpace",
+                            "description": "Style of content-distribution space on the main axis (justify-content).",
+                            "optional": true,
+                            "$ref": "BoxStyle"
+                        },
+                        {
+                            "name": "crossDistributedSpace",
+                            "description": "Style of content-distribution space on the cross axis (align-content).",
+                            "optional": true,
+                            "$ref": "BoxStyle"
+                        },
+                        {
+                            "name": "rowGapSpace",
+                            "description": "Style of empty space caused by row gaps (gap/row-gap).",
+                            "optional": true,
+                            "$ref": "BoxStyle"
+                        },
+                        {
+                            "name": "columnGapSpace",
+                            "description": "Style of empty space caused by columns gaps (gap/column-gap).",
+                            "optional": true,
+                            "$ref": "BoxStyle"
                         }
                     ]
                 },
@@ -12247,6 +12296,25 @@
                                 "dashed",
                                 "dotted"
                             ]
+                        }
+                    ]
+                },
+                {
+                    "id": "BoxStyle",
+                    "description": "Style information for drawing a box.",
+                    "type": "object",
+                    "properties": [
+                        {
+                            "name": "fillColor",
+                            "description": "The background color for the box (default: transparent)",
+                            "optional": true,
+                            "$ref": "DOM.RGBA"
+                        },
+                        {
+                            "name": "hatchColor",
+                            "description": "The hatching color for the box (default: transparent)",
+                            "optional": true,
+                            "$ref": "DOM.RGBA"
                         }
                     ]
                 },
@@ -12371,6 +12439,22 @@
                             "name": "gridHighlightConfig",
                             "description": "A descriptor for the highlight appearance.",
                             "$ref": "GridHighlightConfig"
+                        },
+                        {
+                            "name": "nodeId",
+                            "description": "Identifier of the node to highlight.",
+                            "$ref": "DOM.NodeId"
+                        }
+                    ]
+                },
+                {
+                    "id": "FlexNodeHighlightConfig",
+                    "type": "object",
+                    "properties": [
+                        {
+                            "name": "flexContainerHighlightConfig",
+                            "description": "A descriptor for the highlight appearance of flex containers.",
+                            "$ref": "FlexContainerHighlightConfig"
                         },
                         {
                             "name": "nodeId",
@@ -12728,6 +12812,19 @@
                             "type": "array",
                             "items": {
                                 "$ref": "GridNodeHighlightConfig"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "setShowFlexOverlays",
+                    "parameters": [
+                        {
+                            "name": "flexNodeHighlightConfigs",
+                            "description": "An array of node identifiers and descriptors for the highlight appearance.",
+                            "type": "array",
+                            "items": {
+                                "$ref": "FlexNodeHighlightConfig"
                             }
                         }
                     ]
@@ -13577,6 +13674,13 @@
                         {
                             "name": "fromSurface",
                             "description": "Capture the screenshot from the surface, rather than the view. Defaults to true.",
+                            "experimental": true,
+                            "optional": true,
+                            "type": "boolean"
+                        },
+                        {
+                            "name": "captureBeyondViewport",
+                            "description": "Capture the screenshot beyond the viewport. Defaults to false.",
                             "experimental": true,
                             "optional": true,
                             "type": "boolean"
@@ -14630,6 +14734,15 @@
                             "name": "frameId",
                             "description": "Id of the frame that has been detached.",
                             "$ref": "FrameId"
+                        },
+                        {
+                            "name": "reason",
+                            "experimental": true,
+                            "type": "string",
+                            "enum": [
+                                "remove",
+                                "swap"
+                            ]
                         }
                     ]
                 },
@@ -19637,6 +19750,7 @@
                             "enum": [
                                 "ambiguous",
                                 "assert",
+                                "CSPViolation",
                                 "debugCommand",
                                 "DOM",
                                 "EventListener",

@@ -148,7 +148,7 @@ export class ConsoleView extends UI.Widget.VBox {
     const diracAngel = Common.getDiracAngel();
     diracAngel.initConsole();
 
-    this._searchableView = new UI.SearchableView.SearchableView(this);
+    this._searchableView = new UI.SearchableView.SearchableView(this, null);
     this._searchableView.element.classList.add('console-searchable-view');
     this._searchableView.setPlaceholder(Common.UIString.UIString('Find string in logs'));
     this._searchableView.setMinimalSearchQuerySize(0);
@@ -219,12 +219,14 @@ export class ConsoleView extends UI.Widget.VBox {
     const rightToolbar = new UI.Toolbar.Toolbar('', this._consoleToolbarContainer);
     toolbar.appendToolbarItem(this._splitWidget.createShowHideSidebarButton(ls`console sidebar`));
     toolbar.appendToolbarItem(UI.Toolbar.Toolbar.createActionButton(
-        /** @type {!UI.Action.Action }*/ (UI.ActionRegistry.ActionRegistry.instance().action('console.clear'))));
+        /** @type {!UI.ActionRegistration.Action }*/ (
+            UI.ActionRegistry.ActionRegistry.instance().action('console.clear'))));
     toolbar.appendSeparator();
     toolbar.appendToolbarItem(this._consoleContextSelector.toolbarItem());
     toolbar.appendSeparator();
     const liveExpressionButton = UI.Toolbar.Toolbar.createActionButton(
-        /** @type {!UI.Action.Action }*/ (UI.ActionRegistry.ActionRegistry.instance().action('console.create-pin')));
+        /** @type {!UI.ActionRegistration.Action }*/ (
+            UI.ActionRegistry.ActionRegistry.instance().action('console.create-pin')));
     toolbar.appendToolbarItem(liveExpressionButton);
     toolbar.appendSeparator();
     toolbar.appendToolbarItem(this._filter._textFilterUI);
@@ -2449,7 +2451,7 @@ export class ConsoleGroup {
 }
 
 /**
- * @implements {UI.ActionDelegate.ActionDelegate}
+ * @implements {UI.ActionRegistration.ActionDelegate}
  */
 export class ActionDelegate {
   /**

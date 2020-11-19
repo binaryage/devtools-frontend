@@ -28,13 +28,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// @ts-nocheck
-// TODO(crbug.com/1011811): Enable TypeScript compiler checks
-
 import * as Common from '../common/common.js';
 import * as Host from '../host/host.js';
 import * as PerfUI from '../perf_ui/perf_ui.js';
+import * as SDK from '../sdk/sdk.js';  // eslint-disable-line no-unused-vars
 import * as UI from '../ui/ui.js';
+
+/** @type {!Common.Color.Generator|null} */
+let colorGeneratorInstance = null;
 
 /**
  * @implements {PerfUI.FlameChart.FlameChartDataProvider}
@@ -43,22 +44,32 @@ import * as UI from '../ui/ui.js';
 export class ProfileFlameChartDataProvider {
   constructor() {
     this._colorGenerator = ProfileFlameChartDataProvider.colorGenerator();
+    this._maxStackDepth = 0;
+    /**
+     * @type {?PerfUI.FlameChart.TimelineData}
+     * @protected
+     */
+    this.timelineData_ = null;
+    /**
+     * @type {!Array<!SDK.ProfileTreeModel.ProfileNode>}
+     * @protected
+     */
+    this.entryNodes = [];
   }
 
   /**
    * @return {!Common.Color.Generator}
    */
   static colorGenerator() {
-    if (!ProfileFlameChartDataProvider._colorGenerator) {
-      const colorGenerator =
-          new Common.Color.Generator({min: 30, max: 330}, {min: 50, max: 80, count: 5}, {min: 80, max: 90, count: 3});
+    if (!colorGeneratorInstance) {
+      colorGeneratorInstance = new Common.Color.Generator(
+          {min: 30, max: 330, count: undefined}, {min: 50, max: 80, count: 5}, {min: 80, max: 90, count: 3});
 
-      colorGenerator.setColorForID('(idle)', 'hsl(0, 0%, 94%)');
-      colorGenerator.setColorForID('(program)', 'hsl(0, 0%, 80%)');
-      colorGenerator.setColorForID('(garbage collector)', 'hsl(0, 0%, 80%)');
-      ProfileFlameChartDataProvider._colorGenerator = colorGenerator;
+      colorGeneratorInstance.setColorForID('(idle)', 'hsl(0, 0%, 94%)');
+      colorGeneratorInstance.setColorForID('(program)', 'hsl(0, 0%, 80%)');
+      colorGeneratorInstance.setColorForID('(garbage collector)', 'hsl(0, 0%, 80%)');
     }
-    return ProfileFlameChartDataProvider._colorGenerator;
+    return colorGeneratorInstance;
   }
 
   /**
@@ -66,7 +77,7 @@ export class ProfileFlameChartDataProvider {
    * @return {number}
    */
   minimumBoundary() {
-    return this._cpuProfile.profileStartTime;
+    throw 'Not implemented.';
   }
 
   /**
@@ -74,7 +85,7 @@ export class ProfileFlameChartDataProvider {
    * @return {number}
    */
   totalTime() {
-    return this._cpuProfile.profileHead.total;
+    throw 'Not implemented.';
   }
 
   /**
@@ -100,7 +111,7 @@ export class ProfileFlameChartDataProvider {
    * @return {?PerfUI.FlameChart.TimelineData}
    */
   timelineData() {
-    return this._timelineData || this._calculateTimelineData();
+    return this.timelineData_ || this._calculateTimelineData();
   }
 
   /**
@@ -125,7 +136,7 @@ export class ProfileFlameChartDataProvider {
    * @return {boolean}
    */
   canJumpToEntry(entryIndex) {
-    return this._entryNodes[entryIndex].scriptId !== '0';
+    return this.entryNodes[entryIndex].scriptId !== '0';
   }
 
   /**
@@ -134,7 +145,7 @@ export class ProfileFlameChartDataProvider {
    * @return {string}
    */
   entryTitle(entryIndex) {
-    const node = this._entryNodes[entryIndex];
+    const node = this.entryNodes[entryIndex];
     return UI.UIUtils.beautifyFunctionName(node.functionName);
   }
 
@@ -148,8 +159,15 @@ export class ProfileFlameChartDataProvider {
       this._font = '11px ' + Host.Platform.fontFamily();
       this._boldFont = 'bold ' + this._font;
     }
-    const node = this._entryNodes[entryIndex];
-    return node.deoptReason ? this._boldFont : this._font;
+    return this.entryHasDeoptReason(entryIndex) ? /** @type {string} */ (this._boldFont) : this._font;
+  }
+
+  /**
+   * @param {number} entryIndex
+   * @return {boolean}
+   */
+  entryHasDeoptReason(entryIndex) {
+    throw 'Not implemented.';
   }
 
   /**
@@ -158,7 +176,7 @@ export class ProfileFlameChartDataProvider {
    * @return {string}
    */
   entryColor(entryIndex) {
-    const node = this._entryNodes[entryIndex];
+    const node = this.entryNodes[entryIndex];
     // For idle and program, we want different 'shades of gray', so we fallback to functionName as scriptId = 0
     // For rest of nodes e.g eval scripts, if url is empty then scriptId will be guaranteed to be non-zero
     return this._colorGenerator.colorForID(node.url || (node.scriptId !== '0' ? node.scriptId : node.functionName));
@@ -203,6 +221,13 @@ export class ProfileFlameChartDataProvider {
   navStartTimes() {
     return new Map();
   }
+
+  /**
+   * @return {number}
+   */
+  entryNodesLength() {
+    return this.entryNodes.length;
+  }
 }
 
 
@@ -234,6 +259,7 @@ export class CPUProfileFlameChart extends UI.Widget.VBox {
     this._mainPane.addEventListener(PerfUI.FlameChart.Events.CanvasFocused, this._onEntrySelected, this);
     this._overviewPane.addEventListener(PerfUI.OverviewGrid.Events.WindowChanged, this._onWindowChanged, this);
     this._dataProvider = dataProvider;
+    /** @type {!Array<number>} */
     this._searchResults = [];
   }
 
@@ -301,9 +327,10 @@ export class CPUProfileFlameChart extends UI.Widget.VBox {
   performSearch(searchConfig, shouldJump, jumpBackwards) {
     const matcher = createPlainTextSearchRegex(searchConfig.query, searchConfig.caseSensitive ? '' : 'i');
 
+    /** @type {number} */
     const selectedEntryIndex = this._searchResultIndex !== -1 ? this._searchResults[this._searchResultIndex] : -1;
     this._searchResults = [];
-    const entriesCount = this._dataProvider._entryNodes.length;
+    const entriesCount = this._dataProvider.entryNodesLength();
     for (let index = 0; index < entriesCount; ++index) {
       if (this._dataProvider.entryTitle(index).match(matcher)) {
         this._searchResults.push(index);
@@ -372,8 +399,17 @@ export class CPUProfileFlameChart extends UI.Widget.VBox {
  * @unrestricted
  */
 export class OverviewCalculator {
-  constructor(dataProvider) {
-    this._dataProvider = dataProvider;
+  /**
+   * @param {function(number, number=): string} formatter
+   */
+  constructor(formatter) {
+    this._formatter = formatter;
+    /** @type {number} */
+    this._minimumBoundaries;
+    /** @type {number} */
+    this._maximumBoundaries;
+    /** @type {number} */
+    this._xScaleFactor;
   }
 
   /**
@@ -402,7 +438,7 @@ export class OverviewCalculator {
    * @return {string}
    */
   formatValue(value, precision) {
-    return this._dataProvider.formatValue(value - this._minimumBoundaries, precision);
+    return this._formatter(value - this._minimumBoundaries, precision);
   }
 
   /**
@@ -450,10 +486,12 @@ export class OverviewPane extends UI.Widget.VBox {
     super();
     this.element.classList.add('cpu-profile-flame-chart-overview-pane');
     this._overviewContainer = this.element.createChild('div', 'cpu-profile-flame-chart-overview-container');
-    this._overviewCalculator = new OverviewCalculator(dataProvider);
+    this._overviewCalculator = new OverviewCalculator(dataProvider.formatValue);
     this._overviewGrid = new PerfUI.OverviewGrid.OverviewGrid('cpu-profile-flame-chart', this._overviewCalculator);
     this._overviewGrid.element.classList.add('fill');
-    this._overviewCanvas = this._overviewContainer.createChild('canvas', 'cpu-profile-flame-chart-overview-canvas');
+    /** @type {!HTMLCanvasElement} */
+    this._overviewCanvas = /** @type {!HTMLCanvasElement} */ (
+        this._overviewContainer.createChild('canvas', 'cpu-profile-flame-chart-overview-canvas'));
     this._overviewContainer.appendChild(this._overviewGrid.element);
     this._dataProvider = dataProvider;
     this._overviewGrid.addEventListener(PerfUI.OverviewGrid.Events.WindowChanged, this._onWindowChanged, this);
@@ -544,6 +582,9 @@ export class OverviewPane extends UI.Widget.VBox {
     const canvasHeight = this._overviewCanvas.height;
     const drawData = this._calculateDrawData(canvasWidth);
     const context = this._overviewCanvas.getContext('2d');
+    if (!context) {
+      throw new Error('Failed to get canvas context');
+    }
     const ratio = window.devicePixelRatio;
     const offsetFromBottom = ratio;
     const lineWidth = 1;
@@ -554,7 +595,7 @@ export class OverviewPane extends UI.Widget.VBox {
     context.fillStyle = 'rgba(214,225,254,0.8)';
     context.moveTo(-lineWidth, canvasHeight + lineWidth);
     context.lineTo(-lineWidth, Math.round(canvasHeight - drawData[0] * yScaleFactor - offsetFromBottom));
-    let value;
+    let value = 0;
     for (let x = 0; x < canvasWidth; ++x) {
       value = Math.round(canvasHeight - drawData[x] * yScaleFactor - offsetFromBottom);
       context.lineTo(x, value);
@@ -572,7 +613,7 @@ export class OverviewPane extends UI.Widget.VBox {
    */
   _calculateDrawData(width) {
     const dataProvider = this._dataProvider;
-    const timelineData = this._timelineData();
+    const timelineData = /** @type {!PerfUI.FlameChart.TimelineData} */ (this._timelineData());
     const entryStartTimes = timelineData.entryStartTimes;
     const entryTotalTimes = timelineData.entryTotalTimes;
     const entryLevels = timelineData.entryLevels;

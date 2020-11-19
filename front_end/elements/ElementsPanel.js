@@ -37,8 +37,8 @@ import * as SDK from '../sdk/sdk.js';
 import * as UI from '../ui/ui.js';
 
 import {ComputedStyleWidget} from './ComputedStyleWidget.js';
-import {createElementsBreadcrumbs, DOMNode} from './ElementsBreadcrumbs_bridge.js';  // eslint-disable-line no-unused-vars
-import {ElementsTreeElement} from './ElementsTreeElement.js';  // eslint-disable-line no-unused-vars
+import {DOMNode, ElementsBreadcrumbs} from './ElementsBreadcrumbs.js';  // eslint-disable-line no-unused-vars
+import {ElementsTreeElement} from './ElementsTreeElement.js';           // eslint-disable-line no-unused-vars
 import {ElementsTreeElementHighlighter} from './ElementsTreeElementHighlighter.js';
 import {ElementsTreeOutline} from './ElementsTreeOutline.js';
 import {MarkerDecorator} from './MarkerDecorator.js';  // eslint-disable-line no-unused-vars
@@ -84,7 +84,7 @@ export class ElementsPanel extends UI.Panel.Panel {
         UI.SplitWidget.Events.SidebarSizeChanged, this._updateTreeOutlineVisibleWidth.bind(this));
     this._splitWidget.show(this.element);
 
-    this._searchableView = new UI.SearchableView.SearchableView(this);
+    this._searchableView = new UI.SearchableView.SearchableView(this, null);
     this._searchableView.setMinimumSize(25, 28);
     this._searchableView.setPlaceholder(Common.UIString.UIString('Find by string, selector, or XPath'));
     const stackElement = this._searchableView.element;
@@ -109,7 +109,7 @@ export class ElementsPanel extends UI.Panel.Panel {
 
     crumbsContainer.id = 'elements-crumbs';
 
-    this._breadcrumbs = createElementsBreadcrumbs();
+    this._breadcrumbs = new ElementsBreadcrumbs();
     this._breadcrumbs.addEventListener('node-selected', /** @param {!Event} event */ event => {
       this._crumbNodeSelected(/** @type {?} */ (event));
     });
@@ -1145,7 +1145,7 @@ export class ContextMenuProvider {
     if (ElementsPanel.instance().element.isAncestor(/** @type {!Node} */ (event.target))) {
       return;
     }
-    /** @type {function(?):*} */
+    /** @type {function():*} */
     const commandCallback = Common.Revealer.reveal.bind(Common.Revealer.Revealer, object);
     contextMenu.revealSection().appendItem(Common.UIString.UIString('Reveal in Elements panel'), commandCallback);
   }
@@ -1268,7 +1268,7 @@ export class CSSPropertyRevealer {
 
 
 /**
- * @implements {UI.ActionDelegate.ActionDelegate}
+ * @implements {UI.ActionRegistration.ActionDelegate}
  * @unrestricted
  */
 export class ElementsActionDelegate {

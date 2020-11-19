@@ -39,7 +39,7 @@ import * as UI from '../ui/ui.js';
 import {UISourceCodeFrame} from './UISourceCodeFrame.js';
 
 /**
- * @implements {UI.ActionDelegate.ActionDelegate}
+ * @implements {UI.ActionRegistration.ActionDelegate}
  * @implements {UI.Toolbar.ItemsProvider}
  * @implements {UI.ContextMenu.Provider}
  * @unrestricted
@@ -182,7 +182,7 @@ export class WatchExpressionsSidebarPane extends UI.ThrottledWidget.ThrottledWid
   }
 
   /**
-   * @param {!Event} event
+   * @param {!MouseEvent} event
    */
   _contextMenu(event) {
     const contextMenu = new UI.ContextMenu.ContextMenu(event);
@@ -192,7 +192,7 @@ export class WatchExpressionsSidebarPane extends UI.ThrottledWidget.ThrottledWid
 
   /**
    * @param {!UI.ContextMenu.ContextMenu} contextMenu
-   * @param {!Event} event
+   * @param {!MouseEvent} event
    */
   _populateContextMenu(contextMenu, event) {
     let isEditing = false;

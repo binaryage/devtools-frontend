@@ -37,7 +37,7 @@ export class SourcesView extends UI.Widget.VBox {
 
     const workspace = Workspace.Workspace.WorkspaceImpl.instance();
 
-    this._searchableView = new UI.SearchableView.SearchableView(this, 'sourcesViewSearchConfig');
+    this._searchableView = new UI.SearchableView.SearchableView(this, this, 'sourcesViewSearchConfig');
     this._searchableView.setMinimalSearchQuerySize(0);
     this._searchableView.show(this.element);
 
@@ -715,7 +715,7 @@ export class EditorAction {
 }
 
 /**
- * @implements {UI.ActionDelegate.ActionDelegate}
+ * @implements {UI.ActionRegistration.ActionDelegate}
  * @unrestricted
  */
 export class SwitchFileActionDelegate {
@@ -780,7 +780,7 @@ export class SwitchFileActionDelegate {
 }
 
 /**
- * @implements {UI.ActionDelegate.ActionDelegate}
+ * @implements {UI.ActionRegistration.ActionDelegate}
  * @unrestricted
  */
 export class ActionDelegate {

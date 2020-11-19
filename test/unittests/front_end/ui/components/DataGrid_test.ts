@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 import * as LitHtml from '../../../../../front_end/third_party/lit-html/lit-html.js';
-import * as UIComponents from '../../../../../front_end/ui/components/components.js';  // eslint-disable-line rulesdir/es_modules_import
+import * as UIComponents from '../../../../../front_end/ui/components/components.js';
 
 import {assertElement, assertElements, assertShadowRoot, dispatchClickEvent, dispatchKeyDownEvent, getEventPromise, renderElementIntoDOM} from '../../helpers/DOMHelpers.js';
 import {withMutations} from '../../helpers/MutationHelpers.js';
 
-import {assertCurrentFocusedCellIs, emulateUserFocusingCellAt, emulateUserKeyboardNavigation, focusTableCell, getCellByIndexes, getFocusableCell, getHeaderCellForColumnId, getHeaderCells, getValuesOfAllBodyRows, getValuesOfBodyRowByAriaIndex} from './DataGridHelpers.js';
+import {assertCurrentFocusedCellIs, emulateUserFocusingCellAt, emulateUserKeyboardNavigation, focusTableCell, getAllRows, getCellByIndexes, getFocusableCell, getHeaderCellForColumnId, getHeaderCells, getValuesOfAllBodyRows, getValuesOfBodyRowByAriaIndex} from './DataGridHelpers.js';
 
 const {assert} = chai;
 
@@ -90,6 +90,40 @@ describe('DataGrid', () => {
       ]);
     });
 
+    it('uses the cell\'s value as its title attribute by default', () => {
+      const component = renderDataGrid({rows, columns});
+      renderElementIntoDOM(component);
+      assertShadowRoot(component.shadowRoot);
+
+      const renderedBodyRows = getAllRows(component.shadowRoot);
+      const renderedBodyCells = renderedBodyRows.map(row => Array.from(row.querySelectorAll('td')));
+      const titleAttributesForCellsByRow = renderedBodyCells.map(row => row.map(cell => cell.getAttribute('title')));
+
+      assert.deepEqual(titleAttributesForCellsByRow, [
+        ['London', 'UK', '8.98m'],
+        ['Munich', 'Germany', '1.47m'],
+        ['Barcelona', 'Spain', '1.62m'],
+      ]);
+    });
+
+    it('takes a title override and uses that if provided', () => {
+      const rowsWithTitleSpecified = createRows();
+      rowsWithTitleSpecified[0].cells[0].title = 'EXPLICITLY_PROVIDED_TITLE';
+      const component = renderDataGrid({rows: rowsWithTitleSpecified, columns});
+      renderElementIntoDOM(component);
+      assertShadowRoot(component.shadowRoot);
+
+      const renderedBodyRows = getAllRows(component.shadowRoot);
+      const renderedBodyCells = renderedBodyRows.map(row => Array.from(row.querySelectorAll('td')));
+      const titleAttributesForCellsByRow = renderedBodyCells.map(row => row.map(cell => cell.getAttribute('title')));
+
+      assert.deepEqual(titleAttributesForCellsByRow, [
+        ['EXPLICITLY_PROVIDED_TITLE', 'UK', '8.98m'],
+        ['Munich', 'Germany', '1.47m'],
+        ['Barcelona', 'Spain', '1.62m'],
+      ]);
+    });
+
     it('hides columns marked as hidden', () => {
       const columnsWithCityHidden = createColumns();
       columnsWithCityHidden[0].hidden = true;
@@ -145,9 +179,16 @@ describe('DataGrid', () => {
 
     it('can use the code block render to render text in a <code> tag', () => {
       const columns: UIComponents.DataGridUtils.Column[] = [{id: 'key', title: 'Key', widthWeighting: 1}];
-      const rows: UIComponents.DataGridUtils.Row[] = [
-        {cells: [{columnId: 'key', value: 'Hello World', renderer: UIComponents.DataGridRenderers.codeBlockRenderer}]},
-      ];
+      const rows: UIComponents.DataGridUtils.Row[] = [{
+        cells: [
+          {
+            columnId: 'key',
+            value: 'Hello World',
+            title: 'Hello World',
+            renderer: UIComponents.DataGridRenderers.codeBlockRenderer,
+          },
+        ],
+      }];
       const component = renderDataGrid({columns, rows});
       renderElementIntoDOM(component);
       assertShadowRoot(component.shadowRoot);
@@ -157,8 +198,14 @@ describe('DataGrid', () => {
 
     it('accepts any custom renderer', () => {
       const columns: UIComponents.DataGridUtils.Column[] = [{id: 'key', title: 'Key', widthWeighting: 1}];
-      const rows: UIComponents.DataGridUtils.Row[] =
-          [{cells: [{columnId: 'key', value: 'Hello World', renderer: value => LitHtml.html`<p>foo: ${value}</p>`}]}];
+      const rows: UIComponents.DataGridUtils.Row[] = [{
+        cells: [{
+          columnId: 'key',
+          value: 'Hello World',
+          title: 'Hello World',
+          renderer: value => LitHtml.html`<p>foo: ${value}</p>`,
+        }],
+      }];
       const component = renderDataGrid({columns, rows});
       renderElementIntoDOM(component);
       assertShadowRoot(component.shadowRoot);
@@ -524,8 +571,8 @@ describe('DataGrid', () => {
       assert.strictEqual(scrolledElement.scrollTop, 0);
       const newRow = {
         cells: [
-          {columnId: 'key', value: 'Newly inserted'},
-          {columnId: 'value', value: 'row'},
+          {columnId: 'key', value: 'Newly inserted', title: 'Newly inserted'},
+          {columnId: 'value', value: 'row', title: 'row'},
         ],
       };
       component.data = {
@@ -533,7 +580,7 @@ describe('DataGrid', () => {
         rows: [...rows, newRow],
         activeSort: null,
       };
-      assert.strictEqual(scrolledElement.scrollTop, 61);
+      assert.strictEqual(scrolledElement.scrollTop, 63);
     });
 
     it('does not auto scroll if the user has a cell selected', () => {

@@ -13,7 +13,7 @@ let DOMAIN_SELECTOR: string;
 
 describe('The Application Tab', async () => {
   before(async () => {
-    DOMAIN_SELECTOR = `${COOKIES_SELECTOR} + ol > [aria-label="http://localhost:${getHostedModeServerPort()}"]`;
+    DOMAIN_SELECTOR = `${COOKIES_SELECTOR} + ol > [aria-label="https://localhost:${getHostedModeServerPort()}"]`;
   });
 
   afterEach(async () => {
@@ -41,10 +41,6 @@ describe('The Application Tab', async () => {
       {
         name: 'foo',
         value: 'bar',
-      },
-      {
-        name: '',
-        value: '',
       },
     ]);
   });
@@ -112,9 +108,6 @@ describe('The Application Tab', async () => {
       {
         name: 'foo',
       },
-      {
-        name: '',
-      },
     ]);
 
 
@@ -126,9 +119,6 @@ describe('The Application Tab', async () => {
     assert.deepEqual(dataGridRowValues2, [
       {
         name: 'foo',
-      },
-      {
-        name: '',
       },
     ]);
   });

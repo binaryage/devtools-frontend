@@ -8,7 +8,7 @@ import * as SDK from '../sdk/sdk.js';
 import * as UI from '../ui/ui.js';
 
 import {ElementsPanel} from './ElementsPanel.js';
-import {createLayoutPane, LayoutElement} from './LayoutPane_bridge.js';  // eslint-disable-line no-unused-vars
+import {LayoutElement, LayoutPane} from './LayoutPane.js';  // eslint-disable-line no-unused-vars
 
 /**
  * @param {!Array<!SDK.DOMModel.DOMNode>} nodes
@@ -57,7 +57,7 @@ const gridNodesToElements = nodes => {
 export class LayoutSidebarPane extends UI.ThrottledWidget.ThrottledWidget {
   constructor() {
     super(true /* isWebComponent */);
-    this._layoutPane = createLayoutPane();
+    this._layoutPane = new LayoutPane();
     this.contentElement.appendChild(this._layoutPane);
     this._settings = ['showGridLineLabels', 'showGridTrackSizes', 'showGridAreas', 'extendGridLines'];
     this._uaShadowDOMSetting = Common.Settings.Settings.instance().moduleSetting('showUAShadowDOM');
@@ -110,22 +110,31 @@ export class LayoutSidebarPane extends UI.ThrottledWidget.ThrottledWidget {
     const settings = [];
     for (const settingName of this._settings) {
       const setting = Common.Settings.Settings.instance().moduleSetting(settingName);
-      const ext = setting.extension();
-      if (!ext) {
-        continue;
+      const settingValue = setting.get();
+      const mappedSetting = {
+        type: /** @type {*} */ (setting.type()),
+        name: setting.name,
+        title: setting.title(),
+      };
+      if (typeof settingValue === 'boolean') {
+        settings.push({
+          ...mappedSetting,
+          value: settingValue,
+          options: setting.options().map(opt => ({
+                                           ...opt,
+                                           value: /** @type {boolean} */ (opt.value),
+                                         }))
+        });
+      } else if (typeof settingValue === 'string') {
+        settings.push({
+          ...mappedSetting,
+          value: settingValue,
+          options: setting.options().map(opt => ({
+                                           ...opt,
+                                           value: /** @type {string} */ (opt.value),
+                                         }))
+        });
       }
-      const descriptor = ext.descriptor();
-      settings.push({
-        type: /** @type {string} */ (descriptor.settingType),
-        name: descriptor.settingName,
-        title: descriptor.title ? ls(descriptor.title) : '',
-        value: setting.get(),
-        options: descriptor.options ? descriptor.options.map(opt => ({
-                                                               title: ls(opt.title),
-                                                               value: /** @type {string} */ (opt.value),
-                                                             })) :
-                                      []
-      });
     }
     return settings;
   }

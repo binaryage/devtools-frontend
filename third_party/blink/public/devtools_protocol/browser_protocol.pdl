@@ -2522,6 +2522,12 @@ domain DOMDebugger
       attribute-modified
       node-removed
 
+  # CSP Violation type.
+  experimental type CSPViolationType extends string
+    enum
+      trustedtype-sink-violation
+      trustedtype-policy-violation
+
   # Object event listener.
   type EventListener extends object
     properties
@@ -2588,6 +2594,12 @@ domain DOMDebugger
     parameters
       # Resource URL substring.
       string url
+
+  # Sets breakpoint on particular CSP violations.
+  experimental command setBreakOnCSPViolation
+    parameters
+      # CSP Violations to stop upon.
+      array of CSPViolationType violationTypes
 
   # Sets breakpoint on particular operation with DOM.
   command setDOMBreakpoint
@@ -5640,6 +5652,14 @@ experimental domain Overlay
       optional LineStyle lineSeparator
       # The style of the separator between items
       optional LineStyle itemSeparator
+      # Style of content-distribution space on the main axis (justify-content).
+      optional BoxStyle mainDistributedSpace
+      # Style of content-distribution space on the cross axis (align-content).
+      optional BoxStyle crossDistributedSpace
+      # Style of empty space caused by row gaps (gap/row-gap).
+      optional BoxStyle rowGapSpace
+      # Style of empty space caused by columns gaps (gap/column-gap).
+      optional BoxStyle columnGapSpace
 
   # Style information for drawing a line.
   type LineStyle extends object
@@ -5650,6 +5670,14 @@ experimental domain Overlay
       optional enum pattern
         dashed
         dotted
+
+  # Style information for drawing a box.
+  type BoxStyle extends object
+    properties
+      # The background color for the box (default: transparent)
+      optional DOM.RGBA fillColor
+      # The hatching color for the box (default: transparent)
+      optional DOM.RGBA hatchColor
 
   # Configuration data for the highlighting of page elements.
   type HighlightConfig extends object
@@ -5698,6 +5726,13 @@ experimental domain Overlay
     properties
       # A descriptor for the highlight appearance.
       GridHighlightConfig gridHighlightConfig
+      # Identifier of the node to highlight.
+      DOM.NodeId nodeId
+
+  type FlexNodeHighlightConfig extends object
+    properties
+      # A descriptor for the highlight appearance of flex containers.
+      FlexContainerHighlightConfig flexContainerHighlightConfig
       # Identifier of the node to highlight.
       DOM.NodeId nodeId
 
@@ -5865,6 +5900,11 @@ experimental domain Overlay
     parameters
       # An array of node identifiers and descriptors for the highlight appearance.
       array of GridNodeHighlightConfig gridNodeHighlightConfigs
+
+  command setShowFlexOverlays
+    parameters
+      # An array of node identifiers and descriptors for the highlight appearance.
+      array of FlexNodeHighlightConfig flexNodeHighlightConfigs
 
   # Requests that backend shows paint rectangles
   command setShowPaintRects
@@ -6274,6 +6314,8 @@ domain Page
       optional Viewport clip
       # Capture the screenshot from the surface, rather than the view. Defaults to true.
       experimental optional boolean fromSurface
+      # Capture the screenshot beyond the viewport. Defaults to false.
+      experimental optional boolean captureBeyondViewport
     returns
       # Base64-encoded image data.
       binary data
@@ -6768,6 +6810,12 @@ domain Page
     parameters
       # Id of the frame that has been detached.
       FrameId frameId
+      experimental enum reason
+        # The frame is removed from the DOM.
+        remove
+        # The frame is being swapped out in favor of an out-of-process iframe.
+        # A new frame target will be created (see Target.attachedToTarget).
+        swap
 
   # Fired once navigation of the frame has completed. Frame is now associated with the new loader.
   event frameNavigated

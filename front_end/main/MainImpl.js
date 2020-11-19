@@ -37,6 +37,7 @@ import * as i18n from '../i18n/i18n.js';
 import * as Persistence from '../persistence/persistence.js';
 import * as Platform from '../platform/platform.js';
 import * as ProtocolClient from '../protocol_client/protocol_client.js';
+import * as Recorder from '../recorder/recorder.js';
 import * as Root from '../root/root.js';
 import * as SDK from '../sdk/sdk.js';
 import * as Snippets from '../snippets/snippets.js';
@@ -185,6 +186,7 @@ export class MainImpl {
     Root.Runtime.experiments.register('spotlight', 'Spotlight', true);
     Root.Runtime.experiments.register('webauthnPane', 'WebAuthn Pane');
     Root.Runtime.experiments.register('keyboardShortcutEditor', 'Enable keyboard shortcut editor', true);
+    Root.Runtime.experiments.register('recorder', 'Recorder');
 
     // Timeline
     Root.Runtime.experiments.register('timelineEventInitiators', 'Timeline: event initiators');
@@ -279,6 +281,12 @@ export class MainImpl {
     UI.ContextMenu.ContextMenu.initialize();
     UI.ContextMenu.ContextMenu.installHandler(document);
     UI.Tooltip.Tooltip.installHandler(document);
+
+    // We need to force creation of the FrameManager early to make sure no issues are missed.
+    SDK.FrameManager.FrameManager.instance();
+    // We need to force creation of the NetworkLog early to make sure no requests are missed.
+    SDK.NetworkLog.NetworkLog.instance();
+
     // @ts-ignore layout test global
     self.SDK.consoleModel = SDK.ConsoleModel.ConsoleModel.instance();
     // @ts-ignore layout test global
@@ -332,6 +340,13 @@ export class MainImpl {
     Persistence.IsolatedFileSystemManager.IsolatedFileSystemManager.instance().addPlatformFileSystem(
         // @ts-ignore https://github.com/microsoft/TypeScript/issues/41397
         'snippet://', new Snippets.ScriptSnippetFileSystem.SnippetFileSystem());
+
+    if (Root.Runtime.experiments.isEnabled('recorder')) {
+      Persistence.IsolatedFileSystemManager.IsolatedFileSystemManager.instance().addPlatformFileSystem(
+          // @ts-ignore https://github.com/microsoft/TypeScript/issues/41397
+          'recording://', new Recorder.RecordingFileSystem.RecordingFileSystem());
+    }
+
     // @ts-ignore layout test global
     self.Persistence.persistence = Persistence.Persistence.PersistenceImpl.instance({
       forceNew: true,
@@ -384,8 +399,7 @@ export class MainImpl {
     // TODO: we should not access actions from other modules.
     if (toggleSearchNodeAction) {
       Host.InspectorFrontendHost.InspectorFrontendHostInstance.events.addEventListener(
-          Host.InspectorFrontendHostAPI.Events.EnterInspectElementMode,
-          () => {
+          Host.InspectorFrontendHostAPI.Events.EnterInspectElementMode, () => {
             toggleSearchNodeAction.execute();
           }, this);
     }
@@ -565,7 +579,7 @@ export class MainImpl {
 MainImpl._instanceForTest = null;
 
 /**
- * @implements {UI.ActionDelegate.ActionDelegate}
+ * @implements {UI.ActionRegistration.ActionDelegate}
  * @unrestricted
  */
 export class ZoomActionDelegate {
@@ -596,7 +610,7 @@ export class ZoomActionDelegate {
 }
 
 /**
- * @implements {UI.ActionDelegate.ActionDelegate}
+ * @implements {UI.ActionRegistration.ActionDelegate}
  * @unrestricted
  */
 export class SearchActionDelegate {
@@ -746,27 +760,48 @@ export class MainMenuItem {
                                                                     Common.UIString.UIString('Show console drawer'));
     contextMenu.appendItemsAtLocation('mainMenu');
     const moreTools = contextMenu.defaultSection().appendSubMenuItem(Common.UIString.UIString('More tools'));
-    const extensions = Root.Runtime.Runtime.instance().extensions('view', undefined, true);
-    for (const extension of extensions) {
-      const descriptor = extension.descriptor();
+    const unionOfViewExtensions = [
+      // TODO(crbug.com/1134103): Remove this call when all views are migrated
+      ...Root.Runtime.Runtime.instance().extensions('view').map(extension => {
+        return {
+          location: extension.descriptor().location,
+          persistence: extension.descriptor().persistence,
+          title: extension.title(),
+          id: extension.descriptor().id,
+        };
+      }),
+      ...UI.ViewManager.getRegisteredViewExtensions().map(view => {
+        return {
+          location: view.location(),
+          persistence: view.persistence(),
+          title: view.title(),
+          id: view.viewId(),
+        };
+      }),
+    ];
+    unionOfViewExtensions.sort((extension1, extension2) => {
+      const title1 = extension1.title || '';
+      const title2 = extension2.title || '';
+      return title1.localeCompare(title2);
+    });
 
-      if (descriptor['id'] === 'issues-pane') {
-        moreTools.defaultSection().appendItem(extension.title(), () => {
+    for (const viewExtension of unionOfViewExtensions) {
+      if (viewExtension.id === 'issues-pane') {
+        moreTools.defaultSection().appendItem(viewExtension.title, () => {
           Host.userMetrics.issuesPanelOpenedFrom(Host.UserMetrics.IssueOpener.HamburgerMenu);
           UI.ViewManager.ViewManager.instance().showView('issues-pane', /* userGesture */ true);
         });
         continue;
       }
 
-      if (descriptor['persistence'] !== 'closeable') {
+      if (viewExtension.persistence !== 'closeable') {
         continue;
       }
-      if (descriptor['location'] !== 'drawer-view' && descriptor['location'] !== 'panel') {
+      if (viewExtension.location !== 'drawer-view' && viewExtension.location !== 'panel') {
         continue;
       }
-
-      moreTools.defaultSection().appendItem(extension.title(), omitFocus => {
-        UI.ViewManager.ViewManager.instance().showView(descriptor['id'], true, /** @type {boolean} */ (omitFocus));
+      moreTools.defaultSection().appendItem(viewExtension.title, () => {
+        UI.ViewManager.ViewManager.instance().showView(viewExtension.id, true, false);
       });
     }
 
@@ -837,7 +872,7 @@ export function sendOverProtocol(method, params) {
 }
 
 /**
- * @implements {UI.ActionDelegate.ActionDelegate}
+ * @implements {UI.ActionRegistration.ActionDelegate}
  * @unrestricted
  */
 export class ReloadActionDelegate {

@@ -15,16 +15,12 @@ const UNITTESTS_DIRECTORY = path.join(__dirname, '..', '..', '..', 'test', 'unit
 const INSPECTOR_OVERLAY_DIRECTORY = path.join(__dirname, '..', '..', '..', 'front_end', 'inspector_overlay');
 
 const EXEMPTED_THIRD_PARTY_MODULES = new Set([
-  // lit-html is exempt as it doesn't expose all its modules from the root file
-  path.join(FRONT_END_DIRECTORY, 'third_party', 'lit-html'),
   // wasmparser is exempt as it doesn't expose all its modules from the root file
   path.join(FRONT_END_DIRECTORY, 'third_party', 'wasmparser'),
   // acorn is exempt as it doesn't expose all its modules from the root file
   path.join(FRONT_END_DIRECTORY, 'third_party', 'acorn'),
   // acorn-loose is exempt as it doesn't expose all its modules from the root file
   path.join(FRONT_END_DIRECTORY, 'third_party', 'acorn-loose'),
-  // marked is exempt as it doesn't expose all its modules from the root file
-  path.join(FRONT_END_DIRECTORY, 'third_party', 'marked'),
   // client-variations is exempt as it doesn't expose all its modules from the root file
   path.join(FRONT_END_DIRECTORY, 'third_party', 'chromium', 'client-variations'),
 ]);
@@ -46,8 +42,7 @@ function isSideEffectImportSpecifier(specifiers) {
 
 function isModuleEntrypoint(fileName) {
   const fileNameWithoutExtension = path.basename(fileName).replace(path.extname(fileName), '');
-  const directoryName = computeTopLevelFolder(fileName);
-
+  const directoryName = path.basename(path.dirname(fileName));
   // TODO(crbug.com/1011811): remove -legacy fallback
   return directoryName === fileNameWithoutExtension || `${directoryName}-legacy` === fileNameWithoutExtension;
 }
@@ -219,6 +214,25 @@ module.exports = {
               },
             });
           } else if (isModuleEntrypoint(importingFileName)) {
+            /**
+             * We allow ui/utils/utils.js to get away with this because it's not
+             * really a proper entry point and should be folded properly into
+             * the UI module, as it's exposed via `UI.Utils.X`.
+             * TODO * (https://crbug.com/1148274) tidy up the utils and remove this
+             * special case.
+             */
+            if (importingFileName.includes(['ui', 'utils', 'utils.js'].join(path.sep))) {
+              return;
+            }
+            if (importingFileName.includes(['test_setup', 'test_setup.ts'].join(path.sep)) &&
+                importPath.includes([path.sep, 'helpers', path.sep].join(''))) {
+              /** Within test files we allow the direct import of test helpers.
+               * The entry point detection detects test_setup.ts as an
+               * entrypoint, but we don't treat it as such, it's just a file
+               * that Karma runs to setup the environment.
+               */
+              return;
+            }
             context.report({
               node,
               message:

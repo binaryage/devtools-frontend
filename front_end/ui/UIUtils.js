@@ -29,10 +29,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// @ts-nocheck
-// TODO(crbug.com/1011811): Enable TypeScript compiler checks
-
 import * as Common from '../common/common.js';
+import * as DOMExtension from '../dom_extension/dom_extension.js';
 import * as Host from '../host/host.js';
 import * as Platform from '../platform/platform.js';
 import * as Root from '../root/root.js';
@@ -74,10 +72,10 @@ export function installDragHandle(
    */
   function onMouseDown(event) {
     const dragHandler = new DragHandler();
-    const dragStart = dragHandler.elementDragStart.bind(
-        dragHandler, element, elementDragStart, elementDrag, elementDragEnd, cursor, event);
+    const dragStart = () =>
+        dragHandler.elementDragStart(element, elementDragStart, elementDrag, elementDragEnd, cursor, event);
     if (startDelay) {
-      startTimer = setTimeout(dragStart, startDelay);
+      startTimer = window.setTimeout(dragStart, startDelay);
     } else {
       dragStart();
     }
@@ -85,18 +83,19 @@ export function installDragHandle(
 
   function onMouseUp() {
     if (startTimer) {
-      clearTimeout(startTimer);
+      window.clearTimeout(startTimer);
     }
     startTimer = null;
   }
 
+  /** @type {?number} */
   let startTimer;
   element.addEventListener('mousedown', onMouseDown, false);
   if (startDelay) {
     element.addEventListener('mouseup', onMouseUp, false);
   }
   if (hoverCursor !== null) {
-    element.style.cursor = hoverCursor || cursor || '';
+    /** @type {!HTMLElement} */ (element).style.cursor = hoverCursor || cursor || '';
   }
 }
 
@@ -128,7 +127,9 @@ class DragHandler {
     if (!DragHandler._glassPaneUsageCount++) {
       DragHandler._glassPane = new GlassPane();
       DragHandler._glassPane.setPointerEventsBehavior(PointerEventsBehavior.BlockedByGlassPane);
-      DragHandler._glassPane.show(DragHandler._documentForMouseOut);
+      if (DragHandler._documentForMouseOut) {
+        DragHandler._glassPane.show(DragHandler._documentForMouseOut);
+      }
     }
   }
 
@@ -140,9 +141,11 @@ class DragHandler {
     if (--DragHandler._glassPaneUsageCount) {
       return;
     }
-    DragHandler._glassPane.hide();
-    delete DragHandler._glassPane;
-    delete DragHandler._documentForMouseOut;
+    if (DragHandler._glassPane) {
+      DragHandler._glassPane.hide();
+      DragHandler._glassPane = null;
+    }
+    DragHandler._documentForMouseOut = null;
   }
 
   /**
@@ -151,9 +154,10 @@ class DragHandler {
    * @param {function(!MouseEvent):void} elementDrag
    * @param {?function(!MouseEvent):void} elementDragEnd
    * @param {?string} cursor
-   * @param {!Event} event
+   * @param {!Event} ev
    */
-  elementDragStart(targetElement, elementDragStart, elementDrag, elementDragEnd, cursor, event) {
+  elementDragStart(targetElement, elementDragStart, elementDrag, elementDragEnd, cursor, ev) {
+    const event = /** @type {!MouseEvent} */ (ev);
     // Only drag upon left button. Right will likely cause a context menu. So will ctrl-click on mac.
     if (event.button || (Host.Platform.isMac() && event.ctrlKey)) {
       return;
@@ -167,7 +171,7 @@ class DragHandler {
       return;
     }
 
-    const targetDocument = event.target.ownerDocument;
+    const targetDocument = /** @type {!Document} */ (event.target instanceof Node && event.target.ownerDocument);
     this._elementDraggingEventListener = elementDrag;
     this._elementEndDraggingEventListener = elementDragEnd;
     console.assert(
@@ -175,21 +179,24 @@ class DragHandler {
     DragHandler._documentForMouseOut = targetDocument;
     this._dragEventsTargetDocument = targetDocument;
     try {
-      this._dragEventsTargetDocumentTop = targetDocument.defaultView.top.document;
+      if (targetDocument.defaultView) {
+        this._dragEventsTargetDocumentTop = targetDocument.defaultView.top.document;
+      }
     } catch (e) {
       this._dragEventsTargetDocumentTop = this._dragEventsTargetDocument;
     }
 
-    targetDocument.addEventListener('mousemove', this._elementDragMove, true);
+    targetDocument.addEventListener('mousemove', e => this._elementDragMove(/** @type {!MouseEvent} */ (e)), true);
     targetDocument.addEventListener('mouseup', this._elementDragEnd, true);
     targetDocument.addEventListener('mouseout', this._mouseOutWhileDragging, true);
-    if (targetDocument !== this._dragEventsTargetDocumentTop) {
+    if (this._dragEventsTargetDocumentTop && targetDocument !== this._dragEventsTargetDocumentTop) {
       this._dragEventsTargetDocumentTop.addEventListener('mouseup', this._elementDragEnd, true);
     }
 
+    const targetHtmlElement = /** @type {!HTMLElement} */ (targetElement);
     if (typeof cursor === 'string') {
-      this._restoreCursorAfterDrag = restoreCursor.bind(this, targetElement.style.cursor);
-      targetElement.style.cursor = cursor;
+      this._restoreCursorAfterDrag = restoreCursor.bind(this, targetHtmlElement.style.cursor);
+      targetHtmlElement.style.cursor = cursor;
       targetDocument.body.style.cursor = cursor;
     }
     /**
@@ -198,8 +205,8 @@ class DragHandler {
      */
     function restoreCursor(oldCursor) {
       targetDocument.body.style.removeProperty('cursor');
-      targetElement.style.cursor = oldCursor;
-      this._restoreCursorAfterDrag = null;
+      targetHtmlElement.style.cursor = oldCursor;
+      this._restoreCursorAfterDrag = undefined;
     }
     event.preventDefault();
   }
@@ -222,7 +229,7 @@ class DragHandler {
     }
     this._dragEventsTargetDocument.removeEventListener('mousemove', this._elementDragMove, true);
     this._dragEventsTargetDocument.removeEventListener('mouseup', this._elementDragEnd, true);
-    if (this._dragEventsTargetDocument !== this._dragEventsTargetDocumentTop) {
+    if (this._dragEventsTargetDocumentTop && this._dragEventsTargetDocument !== this._dragEventsTargetDocumentTop) {
       this._dragEventsTargetDocumentTop.removeEventListener('mouseup', this._elementDragEnd, true);
     }
     delete this._dragEventsTargetDocument;
@@ -230,14 +237,14 @@ class DragHandler {
   }
 
   /**
-   * @param {!Event} event
+   * @param {!MouseEvent} event
    */
   _elementDragMove(event) {
     if (event.buttons !== 1) {
       this._elementDragEnd(event);
       return;
     }
-    if (this._elementDraggingEventListener(/** @type {!MouseEvent} */ (event))) {
+    if (this._elementDraggingEventListener && this._elementDraggingEventListener(event)) {
       this._cancelDragEvents(event);
     }
   }
@@ -274,6 +281,12 @@ class DragHandler {
 
 DragHandler._glassPaneUsageCount = 0;
 
+/** @type {?GlassPane} */
+DragHandler._glassPane = null;
+
+/** @type {?Document} */
+DragHandler._documentForMouseOut = null;
+
 /**
  * @param {?Node=} node
  * @return {boolean}
@@ -282,20 +295,22 @@ export function isBeingEdited(node) {
   if (!node || node.nodeType !== Node.ELEMENT_NODE) {
     return false;
   }
-  let element = /** {!Element} */ (node);
+  const element = /** @type {!Element} */ (node);
   if (element.classList.contains('text-prompt') || element.nodeName === 'INPUT' || element.nodeName === 'TEXTAREA') {
     return true;
   }
 
-  if (!UI.__editingCount) {
+  if (!elementsBeingEdited.size) {
     return false;
   }
 
-  while (element) {
-    if (element.__editing) {
+  /** @type {?Element} */
+  let currentElement = element;
+  while (currentElement) {
+    if (elementsBeingEdited.has(element)) {
       return true;
     }
-    element = element.parentElementOrShadowHost();
+    currentElement = currentElement.parentElementOrShadowHost();
   }
   return false;
 }
@@ -305,7 +320,7 @@ export function isBeingEdited(node) {
  * @suppressGlobalPropertiesCheck
  */
 export function isEditing() {
-  if (UI.__editingCount) {
+  if (elementsBeingEdited.size) {
     return true;
   }
 
@@ -323,22 +338,23 @@ export function isEditing() {
  */
 export function markBeingEdited(element, value) {
   if (value) {
-    if (element.__editing) {
+    if (elementsBeingEdited.has(element)) {
       return false;
     }
     element.classList.add('being-edited');
-    element.__editing = true;
-    UI.__editingCount = (UI.__editingCount || 0) + 1;
+    elementsBeingEdited.add(element);
   } else {
-    if (!element.__editing) {
+    if (!elementsBeingEdited.has(element)) {
       return false;
     }
     element.classList.remove('being-edited');
-    delete element.__editing;
-    --UI.__editingCount;
+    elementsBeingEdited.delete(element);
   }
   return true;
 }
+
+/** @type {!Set<!Element>} */
+const elementsBeingEdited = new Set();
 
 // Avoids Infinity, NaN, and scientific notation (e.g. 1e20), see crbug.com/81165.
 const _numberRegex = /^(-?(?:\d+(?:\.\d+)?|\.\d+))$/;
@@ -351,26 +367,19 @@ export const StyleValueDelimiters = ' \xA0\t\n"\':;,/()';
  */
 export function getValueModificationDirection(event) {
   let direction = null;
-  // TODO(crbug.com/1145518) Remove usage of MouseWheelEvent.
-  if (event.type === 'mousewheel') {
+  if (event.type === 'wheel') {
     // When shift is pressed while spinning mousewheel, delta comes as wheelDeltaX.
-    if (event.wheelDeltaY > 0 || event.wheelDeltaX > 0) {
+    const wheelEvent = /** @type {!WheelEvent} */ (event);
+    if (wheelEvent.deltaY < 0 || wheelEvent.deltaX < 0) {
       direction = 'Up';
-    } else if (event.wheelDeltaY < 0 || event.wheelDeltaX < 0) {
-      direction = 'Down';
-    }
-  } else if (event.type === 'wheel') {
-    // When shift is pressed while spinning mousewheel, delta comes as wheelDeltaX.
-    // WheelEvent's deltaY is inverse from MouseWheelEvent.
-    if (event.deltaY < 0 || event.deltaX < 0) {
-      direction = 'Up';
-    } else if (event.deltaY > 0 || event.deltaX > 0) {
+    } else if (wheelEvent.deltaY > 0 || wheelEvent.deltaX > 0) {
       direction = 'Down';
     }
   } else {
-    if (event.key === 'ArrowUp' || event.key === 'PageUp') {
+    const keyEvent = /** @type {!KeyboardEvent} */ (event);
+    if (keyEvent.key === 'ArrowUp' || keyEvent.key === 'PageUp') {
       direction = 'Up';
-    } else if (event.key === 'ArrowDown' || event.key === 'PageDown') {
+    } else if (keyEvent.key === 'ArrowDown' || keyEvent.key === 'PageDown') {
       direction = 'Down';
     }
   }
@@ -525,23 +534,18 @@ export function createReplacementString(wordString, event, customNumberHandler) 
  * @return {boolean}
  */
 export function handleElementValueModifications(event, element, finishHandler, suggestionHandler, customNumberHandler) {
-  /**
-   * @return {?Range}
-   * @suppressGlobalPropertiesCheck
-   */
-  function createRange() {
-    return document.createRange();
-  }
-
-  const arrowKeyOrMouseWheelEvent =
-      (event.key === 'ArrowUp' || event.key === 'ArrowDown' || event.type === 'mousewheel');
-  const pageKeyPressed = (event.key === 'PageUp' || event.key === 'PageDown');
-  if (!arrowKeyOrMouseWheelEvent && !pageKeyPressed) {
+  const arrowKeyOrWheelEvent =
+      (/** @type {!KeyboardEvent} */ (event).key === 'ArrowUp' ||
+       /** @type {!KeyboardEvent} */ (event).key === 'ArrowDown' || event.type === 'wheel');
+  const pageKeyPressed =
+      (/** @type {!KeyboardEvent} */ (event).key === 'PageUp' ||
+       /** @type {!KeyboardEvent} */ (event).key === 'PageDown');
+  if (!arrowKeyOrWheelEvent && !pageKeyPressed) {
     return false;
   }
 
   const selection = element.getComponentSelection();
-  if (!selection.rangeCount) {
+  if (!selection || !selection.rangeCount) {
     return false;
   }
 
@@ -551,8 +555,9 @@ export function handleElementValueModifications(event, element, finishHandler, s
   }
 
   const originalValue = element.textContent;
-  const wordRange =
-      selectionRange.startContainer.rangeOfWord(selectionRange.startOffset, StyleValueDelimiters, element);
+  /** TODO(crbug.com/1011811): Remove cast once Closure is gone. TS knows about non-nullability of `startContainer` */
+  const wordRange = DOMExtension.DOMExtension.rangeOfWord(
+      /** @type {!Node} */ (selectionRange.startContainer), selectionRange.startOffset, StyleValueDelimiters, element);
   const wordString = wordRange.toString();
 
   if (suggestionHandler && suggestionHandler(wordString)) {
@@ -562,12 +567,12 @@ export function handleElementValueModifications(event, element, finishHandler, s
   const replacementString = createReplacementString(wordString, event, customNumberHandler);
 
   if (replacementString) {
-    const replacementTextNode = createTextNode(replacementString);
+    const replacementTextNode = document.createTextNode(replacementString);
 
     wordRange.deleteContents();
     wordRange.insertNode(replacementTextNode);
 
-    const finalSelectionRange = createRange();
+    const finalSelectionRange = document.createRange();
     finalSelectionRange.setStart(replacementTextNode, 0);
     finalSelectionRange.setEnd(replacementTextNode, replacementString.length);
 
@@ -578,7 +583,7 @@ export function handleElementValueModifications(event, element, finishHandler, s
     event.preventDefault();
 
     if (finishHandler) {
-      finishHandler(originalValue, replacementString);
+      finishHandler(originalValue || '', replacementString);
     }
 
     return true;
@@ -692,18 +697,18 @@ Number.withThousandsSeparator = function(num) {
  * @return {!Element}
  */
 export function formatLocalized(format, substitutions) {
-  const formatters = {s: substitution => substitution};
+  const formatters = {s: /** @param {*} substitution */ substitution => substitution};
   /**
    * @param {!Element} a
    * @param {*} b
    * @return {!Element}
    */
   function append(a, b) {
-    a.appendChild(typeof b === 'string' ? createTextNode(b) : /** @type {!Element} */ (b));
+    a.appendChild(typeof b === 'string' ? document.createTextNode(b) : /** @type {!Element} */ (b));
     return a;
   }
   return Platform.StringUtilities
-      .format(Common.UIString.UIString(format), substitutions, formatters, createElement('span'), append)
+      .format(Common.UIString.UIString(format), substitutions, formatters, document.createElement('span'), append)
       .formattedResult;
 }
 
@@ -763,7 +768,7 @@ export function installComponentRootStyles(element) {
  * @param {!Event} event
  */
 function _windowFocused(document, event) {
-  if (event.target.document.nodeType === Node.DOCUMENT_NODE) {
+  if (event.target instanceof Window && event.target.document.nodeType === Node.DOCUMENT_NODE) {
     document.body.classList.remove('inactive');
   }
 }
@@ -773,7 +778,7 @@ function _windowFocused(document, event) {
  * @param {!Event} event
  */
 function _windowBlurred(document, event) {
-  if (event.target.document.nodeType === Node.DOCUMENT_NODE) {
+  if (event.target instanceof Window && event.target.document.nodeType === Node.DOCUMENT_NODE) {
     document.body.classList.add('inactive');
   }
 }
@@ -786,9 +791,11 @@ export class ElementFocusRestorer {
    * @param {!Element} element
    */
   constructor(element) {
-    this._element = element;
-    this._previous = element.ownerDocument.deepActiveElement();
-    element.focus();
+    /** @type {?HTMLElement} */
+    this._element = /** @type {?HTMLElement} */ (element);
+    /** @type {?HTMLElement} */
+    this._previous = /** @type {?HTMLElement} */ (element.ownerDocument.deepActiveElement());
+    /** @type {!HTMLElement} */ (element).focus();
   }
 
   restore() {
@@ -807,7 +814,7 @@ export class ElementFocusRestorer {
  * @param {!Element} element
  * @param {number} offset
  * @param {number} length
- * @param {!Array.<!Object>=} domChanges
+ * @param {!Array.<*>=} domChanges
  * @return {?Element}
  */
 export function highlightSearchResult(element, offset, length, domChanges) {
@@ -852,6 +859,7 @@ export function runCSSAnimationOnce(element, className) {
  */
 export function highlightRangesWithStyleClass(element, resultRanges, styleClass, changes) {
   changes = changes || [];
+  /** @type {!Array<!Element>} */
   const highlightNodes = [];
   const textNodes = element.childTextNodes();
   const lineText = textNodes
@@ -867,10 +875,10 @@ export function highlightRangesWithStyleClass(element, resultRanges, styleClass,
 
   const nodeRanges = [];
   let rangeEndOffset = 0;
-  for (let i = 0; i < textNodes.length; ++i) {
+  for (const textNode of textNodes) {
     const range = {};
     range.offset = rangeEndOffset;
-    range.length = textNodes[i].textContent.length;
+    range.length = textNode.textContent ? textNode.textContent.length : 0;
     rangeEndOffset = range.offset + range.length;
     nodeRanges.push(range);
   }
@@ -897,37 +905,80 @@ export function highlightRangesWithStyleClass(element, resultRanges, styleClass,
     highlightNode.textContent = lineText.substring(startOffset, endOffset);
 
     const lastTextNode = textNodes[endIndex];
-    const lastText = lastTextNode.textContent;
+    const lastText = lastTextNode.textContent || '';
     lastTextNode.textContent = lastText.substring(endOffset - nodeRanges[endIndex].offset);
-    changes.push({node: lastTextNode, type: 'changed', oldText: lastText, newText: lastTextNode.textContent});
+    changes.push({
+      node: /** @type {!Element} */ (lastTextNode),
+      type: 'changed',
+      oldText: lastText,
+      newText: lastTextNode.textContent,
+      nextSibling: undefined,
+      parent: undefined
+    });
 
-    if (startIndex === endIndex) {
+    if (startIndex === endIndex && lastTextNode.parentElement) {
       lastTextNode.parentElement.insertBefore(highlightNode, lastTextNode);
-      changes.push({node: highlightNode, type: 'added', nextSibling: lastTextNode, parent: lastTextNode.parentElement});
+      changes.push({
+        node: highlightNode,
+        type: 'added',
+        nextSibling: lastTextNode,
+        parent: lastTextNode.parentElement,
+        oldText: undefined,
+        newText: undefined
+      });
       highlightNodes.push(highlightNode);
 
       const prefixNode =
           ownerDocument.createTextNode(lastText.substring(0, startOffset - nodeRanges[startIndex].offset));
       lastTextNode.parentElement.insertBefore(prefixNode, highlightNode);
-      changes.push({node: prefixNode, type: 'added', nextSibling: highlightNode, parent: lastTextNode.parentElement});
+      changes.push({
+        node: /** @type {*} */ (prefixNode),
+        type: 'added',
+        nextSibling: highlightNode,
+        parent: lastTextNode.parentElement,
+        oldText: undefined,
+        newText: undefined
+      });
     } else {
       const firstTextNode = textNodes[startIndex];
-      const firstText = firstTextNode.textContent;
+      const firstText = firstTextNode.textContent || '';
       const anchorElement = firstTextNode.nextSibling;
 
-      firstTextNode.parentElement.insertBefore(highlightNode, anchorElement);
-      changes.push(
-          {node: highlightNode, type: 'added', nextSibling: anchorElement, parent: firstTextNode.parentElement});
-      highlightNodes.push(highlightNode);
+      if (firstTextNode.parentElement) {
+        firstTextNode.parentElement.insertBefore(highlightNode, anchorElement);
+        changes.push({
+          node: highlightNode,
+          type: 'added',
+          nextSibling: anchorElement || undefined,
+          parent: firstTextNode.parentElement,
+          oldText: undefined,
+          newText: undefined
+        });
+        highlightNodes.push(highlightNode);
+      }
 
       firstTextNode.textContent = firstText.substring(0, startOffset - nodeRanges[startIndex].offset);
-      changes.push({node: firstTextNode, type: 'changed', oldText: firstText, newText: firstTextNode.textContent});
+      changes.push({
+        node: /** @type {!Element} */ (firstTextNode),
+        type: 'changed',
+        oldText: firstText,
+        newText: firstTextNode.textContent,
+        nextSibling: undefined,
+        parent: undefined
+      });
 
       for (let j = startIndex + 1; j < endIndex; j++) {
         const textNode = textNodes[j];
         const text = textNode.textContent;
         textNode.textContent = '';
-        changes.push({node: textNode, type: 'changed', oldText: text, newText: textNode.textContent});
+        changes.push({
+          node: /** @type {!Element} */ (textNode),
+          type: 'changed',
+          oldText: text || undefined,
+          newText: textNode.textContent,
+          nextSibling: undefined,
+          parent: undefined
+        });
       }
     }
     startIndex = endIndex;
@@ -937,6 +988,7 @@ export function highlightRangesWithStyleClass(element, resultRanges, styleClass,
   return highlightNodes;
 }
 
+/** @param {!Array<*>} domChanges */
 export function applyDomChanges(domChanges) {
   for (let i = 0, size = domChanges.length; i < size; ++i) {
     const entry = domChanges[i];
@@ -951,6 +1003,7 @@ export function applyDomChanges(domChanges) {
   }
 }
 
+/** @param {!Array<*>} domChanges */
 export function revertDomChanges(domChanges) {
   for (let i = domChanges.length - 1; i >= 0; --i) {
     const entry = domChanges[i];
@@ -1039,6 +1092,7 @@ class InvokeOnceHandlers {
 }
 
 let _coalescingLevel = 0;
+/** @type {?InvokeOnceHandlers} */
 let _postUpdateHandlers = null;
 
 export function startBatchUpdate() {
@@ -1051,8 +1105,11 @@ export function endBatchUpdate() {
   if (--_coalescingLevel) {
     return;
   }
-  _postUpdateHandlers.scheduleInvoke();
-  _postUpdateHandlers = null;
+
+  if (_postUpdateHandlers) {
+    _postUpdateHandlers.scheduleInvoke();
+    _postUpdateHandlers = null;
+  }
 }
 
 /**
@@ -1078,6 +1135,7 @@ export function animateFunction(window, func, params, duration, animationComplet
   const start = window.performance.now();
   let raf = window.requestAnimationFrame(animationStep);
 
+  /** @param {number} timestamp */
   function animationStep(timestamp) {
     const progress = Platform.NumberUtilities.clamp((timestamp - start) / duration, 0, 1);
     func(...params.map(p => p.from + (p.to - p.from) * progress));
@@ -1098,7 +1156,7 @@ export class LongClickController extends Common.ObjectWrapper.ObjectWrapper {
   /**
    * @param {!Element} element
    * @param {function(!Event):void} callback
-   * @param {function(!Event):void} isEditKeyFunc
+   * @param {function(!Event):boolean} isEditKeyFunc
    */
   constructor(element, callback, isEditKeyFunc = event => isEnterOrSpaceKey(event)) {
     super();
@@ -1107,8 +1165,11 @@ export class LongClickController extends Common.ObjectWrapper.ObjectWrapper {
     this._editKey = isEditKeyFunc;
     this._enable();
 
-    /** @type {{mouseUp: function(!Event):void, mouseDown: function(!Event):void, reset: function():void }} */
+    /** @type {({mouseUp: function(!Event):void, mouseDown: function(!Event):void, reset: function():void}|undefined)}} */
     this._longClickData;
+
+    /** @type {(number|undefined)} */
+    this._longClickInterval;
   }
 
   reset() {
@@ -1145,7 +1206,7 @@ export class LongClickController extends Common.ObjectWrapper.ObjectWrapper {
     function keyDown(e) {
       if (this._editKey(e)) {
         const callback = this._callback;
-        this._longClickInterval = setTimeout(callback.bind(null, e), LongClickController.TIME_MS);
+        this._longClickInterval = window.setTimeout(callback.bind(null, e), LongClickController.TIME_MS);
       }
     }
 
@@ -1164,11 +1225,11 @@ export class LongClickController extends Common.ObjectWrapper.ObjectWrapper {
      * @this {LongClickController}
      */
     function mouseDown(e) {
-      if (e.which !== 1) {
+      if (/** @type {!MouseEvent} */ (e).which !== 1) {
         return;
       }
       const callback = this._callback;
-      this._longClickInterval = setTimeout(callback.bind(null, e), LongClickController.TIME_MS);
+      this._longClickInterval = window.setTimeout(callback.bind(null, e), LongClickController.TIME_MS);
     }
 
     /**
@@ -1176,7 +1237,7 @@ export class LongClickController extends Common.ObjectWrapper.ObjectWrapper {
      * @this {LongClickController}
      */
     function mouseUp(e) {
-      if (e.which !== 1) {
+      if (/** @type {!MouseEvent} */ (e).which !== 1) {
         return;
       }
       this.reset();
@@ -1203,9 +1264,11 @@ LongClickController.TIME_MS = 200;
  */
 export function initializeUIUtils(document, themeSetting) {
   document.body.classList.toggle('inactive', !document.hasFocus());
-  document.defaultView.addEventListener('focus', _windowFocused.bind(UI, document), false);
-  document.defaultView.addEventListener('blur', _windowBlurred.bind(UI, document), false);
-  document.addEventListener('focus', focusChanged.bind(UI), true);
+  if (document.defaultView) {
+    document.defaultView.addEventListener('focus', _windowFocused.bind(undefined, document), false);
+    document.defaultView.addEventListener('blur', _windowBlurred.bind(undefined, document), false);
+  }
+  document.addEventListener('focus', focusChanged.bind(undefined), true);
 
   if (!ThemeSupport.ThemeSupport.hasInstance()) {
     ThemeSupport.ThemeSupport.instance({forceNew: true, setting: themeSetting});
@@ -1320,11 +1383,11 @@ export function createLabel(title, className, associatedControl) {
  * @return {!DevToolsRadioButton}
  */
 export function createRadioLabel(name, title, checked) {
-  const element = createElement('span', 'dt-radio');
+  const element = /** @type {!DevToolsRadioButton} */ (document.createElement('span', {is: 'dt-radio'}));
   element.radioElement.name = name;
   element.radioElement.checked = !!checked;
   createTextChild(element.labelElement, title);
-  return /** @type {!DevToolsRadioButton} */ (element);
+  return element;
 }
 
 /**
@@ -1333,7 +1396,7 @@ export function createRadioLabel(name, title, checked) {
  * @return {!HTMLElement}
  */
 export function createIconLabel(title, iconClass) {
-  const element = /** @type {!HTMLElement} */ (createElement('span', 'dt-icon-label'));
+  const element = /** @type {!DevToolsIconLabel} */ (document.createElement('span', {is: 'dt-icon-label'}));
   element.createChild('span').textContent = title;
   element.type = iconClass;
   return element;
@@ -1346,10 +1409,10 @@ export function createIconLabel(title, iconClass) {
  * @param {number} tabIndex
  */
 export function createSlider(min, max, tabIndex) {
-  const element = createElement('span', 'dt-slider');
-  element.sliderElement.min = min;
-  element.sliderElement.max = max;
-  element.sliderElement.step = 1;
+  const element = /** @type {!DevToolsSlider} */ (document.createElement('span', {is: 'dt-slider'}));
+  element.sliderElement.min = String(min);
+  element.sliderElement.max = String(max);
+  element.sliderElement.step = String(1);
   element.sliderElement.tabIndex = tabIndex;
   return element;
 }
@@ -1363,7 +1426,7 @@ export class CheckboxLabel extends HTMLSpanElement {
     this.checkboxElement;
     /** @type {!Element} */
     this.textElement;
-    CheckboxLabel._lastId = (CheckboxLabel._lastId || 0) + 1;
+    CheckboxLabel._lastId = CheckboxLabel._lastId + 1;
     const id = 'ui-checkbox-label' + CheckboxLabel._lastId;
     this._shadowRoot = createShadowRootWithCoreStyles(
         this, {cssFile: 'ui/checkboxTextLabel.css', enableLegacyPatching: true, delegatesFocus: undefined});
@@ -1399,7 +1462,6 @@ export class CheckboxLabel extends HTMLSpanElement {
 
   /**
    * @param {string} color
-   * @this {Element}
    */
   set backgroundColor(color) {
     this.checkboxElement.classList.add('dt-checkbox-themed');
@@ -1408,24 +1470,28 @@ export class CheckboxLabel extends HTMLSpanElement {
 
   /**
    * @param {string} color
-   * @this {Element}
    */
   set checkColor(color) {
     this.checkboxElement.classList.add('dt-checkbox-themed');
-    const stylesheet = createElement('style');
+    const stylesheet = document.createElement('style');
     stylesheet.textContent = 'input.dt-checkbox-themed:checked:after { background-color: ' + color + '}';
     this._shadowRoot.appendChild(stylesheet);
   }
 
   /**
    * @param {string} color
-   * @this {Element}
    */
   set borderColor(color) {
     this.checkboxElement.classList.add('dt-checkbox-themed');
     this.checkboxElement.style.borderColor = color;
   }
 }
+
+/** @type {number} */
+CheckboxLabel._lastId = 0;
+
+/** @type {?function():Element} */
+CheckboxLabel._constructor = null;
 
 export class DevToolsIconLabel extends HTMLSpanElement {
   constructor() {
@@ -1442,9 +1508,8 @@ export class DevToolsIconLabel extends HTMLSpanElement {
   }
 
   /**
-     * @param {string} type
-     * @this {Element}
-     */
+   * @param {string} type
+   */
   set type(type) {
     this._iconElement.setIconType(type);
   }
@@ -1455,8 +1520,10 @@ let labelId = 0;
 export class DevToolsRadioButton extends HTMLSpanElement {
   constructor() {
     super();
+    /** @type {!HTMLInputElement} */
     this.radioElement = /** @type {!HTMLInputElement} */ (this.createChild('input', 'dt-radio-button'));
-    this.labelElement = this.createChild('label');
+    /** @type {!HTMLLabelElement} */
+    this.labelElement = /** @type {!HTMLLabelElement} */ (this.createChild('label'));
 
     const id = 'dt-radio-button-id' + (++labelId);
     this.radioElement.id = id;
@@ -1465,25 +1532,19 @@ export class DevToolsRadioButton extends HTMLSpanElement {
     const root = createShadowRootWithCoreStyles(
         this, {cssFile: 'ui/radioButton.css', enableLegacyPatching: true, delegatesFocus: undefined});
     root.createChild('slot');
-    this.addEventListener('click', radioClickHandler, false);
+    this.addEventListener('click', this.radioClickHandler.bind(this), false);
+  }
+
+  radioClickHandler() {
+    if (this.radioElement.checked || this.radioElement.disabled) {
+      return;
+    }
+    this.radioElement.checked = true;
+    this.radioElement.dispatchEvent(new Event('change'));
   }
 }
 
 registerCustomElement('span', 'dt-radio', DevToolsRadioButton);
-
-/**
-   * @param {!Event} event
-   * @suppressReceiverCheck
-   * @this {Element}
-   */
-function radioClickHandler(event) {
-  if (this.radioElement.checked || this.radioElement.disabled) {
-    return;
-  }
-  this.radioElement.checked = true;
-  this.radioElement.dispatchEvent(new Event('change'));
-}
-
 registerCustomElement('span', 'dt-icon-label', DevToolsIconLabel);
 
 class DevToolsSlider extends HTMLSpanElement {
@@ -1499,17 +1560,13 @@ class DevToolsSlider extends HTMLSpanElement {
 
   /**
      * @param {number} amount
-     * @this {Element}
      */
   set value(amount) {
-    this.sliderElement.value = amount;
+    this.sliderElement.value = String(amount);
   }
 
-  /**
-     * @this {Element}
-     */
   get value() {
-    return this.sliderElement.value;
+    return Number(this.sliderElement.value);
   }
 }
 
@@ -1527,7 +1584,6 @@ export class DevToolsSmallBubble extends HTMLSpanElement {
 
   /**
      * @param {string} type
-     * @this {Element}
      */
   set type(type) {
     this._textElement.className = type;
@@ -1541,7 +1597,8 @@ export class DevToolsCloseButton extends HTMLDivElement {
     super();
     const root = createShadowRootWithCoreStyles(
         this, {cssFile: 'ui/closeButton.css', enableLegacyPatching: true, delegatesFocus: undefined});
-    this._buttonElement = root.createChild('div', 'close-button');
+    /** @type {!HTMLElement} */
+    this._buttonElement = /** @type {!HTMLElement} */ (root.createChild('div', 'close-button'));
     ARIAUtils.setAccessibleName(this._buttonElement, ls`Close`);
     ARIAUtils.markAsButton(this._buttonElement);
     const regularIcon = Icon.create('smallicon-cross', 'default-icon');
@@ -1554,7 +1611,6 @@ export class DevToolsCloseButton extends HTMLDivElement {
 
   /**
      * @param {boolean} gray
-     * @this {Element}
      */
   set gray(gray) {
     if (gray) {
@@ -1568,7 +1624,6 @@ export class DevToolsCloseButton extends HTMLDivElement {
 
   /**
    * @param {string} name
-   * @this {Element}
    */
   setAccessibleName(name) {
     ARIAUtils.setAccessibleName(this._buttonElement, name);
@@ -1576,7 +1631,6 @@ export class DevToolsCloseButton extends HTMLDivElement {
 
   /**
    * @param {boolean} tabbable
-   * @this {Element}
    */
   setTabbable(tabbable) {
     if (tabbable) {
@@ -1590,7 +1644,7 @@ export class DevToolsCloseButton extends HTMLDivElement {
 registerCustomElement('div', 'dt-close-button', DevToolsCloseButton);
 
 /**
- * @param {!Element} input
+ * @param {!HTMLInputElement} input
  * @param {function(string):void} apply
  * @param {function(string):{valid: boolean, errorMessage: (string|undefined)}} validate
  * @param {boolean} numeric
@@ -1729,16 +1783,14 @@ export function measureTextWidth(context, text) {
     return context.measureText(text).width;
   }
 
-  let widthCache = measureTextWidth._textWidthCache;
-  if (!widthCache) {
-    widthCache = new Map();
-    measureTextWidth._textWidthCache = widthCache;
+  if (!measureTextWidthCache) {
+    measureTextWidthCache = new Map();
   }
   const font = context.font;
-  let textWidths = widthCache.get(font);
+  let textWidths = measureTextWidthCache.get(font);
   if (!textWidths) {
     textWidths = new Map();
-    widthCache.set(font, textWidths);
+    measureTextWidthCache.set(font, textWidths);
   }
   let width = textWidths.get(text);
   if (!width) {
@@ -1747,6 +1799,9 @@ export function measureTextWidth(context, text) {
   }
   return width;
 }
+
+/** @type {?Map<string, !Map<string, number>>} */
+let measureTextWidthCache = null;
 
 /**
  * @param {string} article
@@ -1824,14 +1879,16 @@ export function loadImageFromData(data) {
  * @return {!HTMLInputElement}
  */
 export function createFileSelectorElement(callback) {
-  const fileSelectorElement = /** @type {!HTMLInputElement} */ (createElement('input'));
+  const fileSelectorElement = /** @type {!HTMLInputElement} */ (document.createElement('input'));
   fileSelectorElement.type = 'file';
   fileSelectorElement.style.display = 'none';
-  fileSelectorElement.setAttribute('tabindex', -1);
-  fileSelectorElement.onchange = onChange;
-  function onChange(event) {
-    callback(fileSelectorElement.files[0]);
-  }
+  fileSelectorElement.tabIndex = -1;
+  fileSelectorElement.onchange = () => {
+    if (fileSelectorElement.files) {
+      callback(fileSelectorElement.files[0]);
+    }
+  };
+
   return fileSelectorElement;
 }
 
@@ -1861,7 +1918,7 @@ export class MessageDialog {
       content.createChild('div', 'button').appendChild(okButton);
       dialog.setOutsideClickCallback(event => {
         event.consume();
-        resolve();
+        resolve(undefined);
       });
       dialog.show(where);
       okButton.focus();
@@ -1909,7 +1966,7 @@ export class ConfirmDialog {
  * @return {!Element}
  */
 export function createInlineButton(toolbarButton) {
-  const element = createElement('span');
+  const element = document.createElement('span');
   const shadowRoot = createShadowRootWithCoreStyles(
       element, {cssFile: 'ui/inlineButton.css', enableLegacyPatching: true, delegatesFocus: undefined});
   element.classList.add('inline-button');
@@ -1929,6 +1986,7 @@ export class Renderer {
    * @return {!Promise<?{node: !Node, tree: ?TreeOutline}>}
    */
   render(object, options) {
+    throw new Error('not implemented');
   }
 }
 
@@ -1941,8 +1999,12 @@ Renderer.render = async function(object, options) {
   if (!object) {
     throw new Error('Can\'t render ' + object);
   }
-  const renderer = await Root.Runtime.Runtime.instance().extension(Renderer, object).instance();
-  return renderer ? renderer.render(object, options || {}) : null;
+  const extension = Root.Runtime.Runtime.instance().extension(Renderer, object);
+  if (!extension) {
+    return null;
+  }
+  const renderer = /** @type {?Renderer} */ (await extension.instance());
+  return renderer ? renderer.render(object, options) : null;
 };
 
 /**
@@ -1969,17 +2031,20 @@ export function formatTimestamp(timestamp, full) {
 }
 
 /** @typedef {!{title: (string|!Element|undefined), editable: (boolean|undefined) }} */
+// @ts-ignore typedef
 export let Options;
 
-/** @typedef {{
+/**
+ * @typedef {{
  *  node: !Element,
  *  type: string,
- *  oldText: string,
- *  newText: string,
+ *  oldText: (string|undefined),
+ *  newText: (string|undefined),
  *  nextSibling: (Node|undefined),
  *  parent: (Node|undefined),
  * }}
  */
+// @ts-ignore typedef
 export let HighlightChange;
 
 
@@ -2003,7 +2068,10 @@ export const isScrolledToBottom = element => {
  * @return {!Element}
  */
 export function createSVGChild(element, childType, className) {
-  const child = element.ownerDocument.createSVGElement(childType, className);
+  const child = element.ownerDocument.createElementNS('http://www.w3.org/2000/svg', childType);
+  if (className) {
+    child.setAttribute('class', className);
+  }
   element.appendChild(child);
   return child;
 }
@@ -2015,7 +2083,9 @@ export function createSVGChild(element, childType, className) {
  * @return {?Node}
  */
 export const enclosingNodeOrSelfWithNodeNameInArray = (initialNode, nameArray) => {
-  for (let node = initialNode; node && node !== initialNode.ownerDocument; node = node.parentNodeOrShadowHost()) {
+  /** @type {?Node} */
+  let node = initialNode;
+  for (; node && node !== initialNode.ownerDocument; node = node.parentNodeOrShadowHost()) {
     for (let i = 0; i < nameArray.length; ++i) {
       if (node.nodeName.toLowerCase() === nameArray[i].toLowerCase()) {
         return node;
@@ -2035,7 +2105,7 @@ export const enclosingNodeOrSelfWithNodeName = function(node, nodeName) {
 };
 
 /**
- * @param {null|undefined|!Document|!DocumentFragment} document
+ * @param {null|undefined|!Document|!ShadowRoot} document
  * @param {number} x
  * @param {number} y
  * @return {?Node}
@@ -2055,15 +2125,16 @@ export const deepElementFromPoint = (document, x, y) => {
 };
 
 /**
- * @param {!Event} event
+ * @param {!Event} ev
  * @return {?Node}
  */
-export const deepElementFromEvent = event => {
+export const deepElementFromEvent = ev => {
+  const event = /** @type {!MouseEvent} */ (ev);
   // Some synthetic events have zero coordinates which lead to a wrong element. Better return nothing in this case.
   if (!event.which && !event.pageX && !event.pageY && !event.clientX && !event.clientY && !event.movementX &&
       !event.movementY) {
     return null;
   }
-  const root = event.target && event.target.getComponentRoot();
-  return root ? deepElementFromPoint(root, event.pageX, event.pageY) : null;
+  const root = event.target && /** @type {!Element} */ (event.target).getComponentRoot();
+  return root ? deepElementFromPoint(/** @type {(!Document|!ShadowRoot)} */ (root), event.pageX, event.pageY) : null;
 };

@@ -38,8 +38,7 @@
       <part file="../input/input_strings.grdp" />
       <part file="../inspector_main/inspector_main_strings.grdp" />
       <part file="../js_profiler/js_profiler_strings.grdp" />
-      <part file="../layer_viewer/layer_viewer_strings.grdp" />
-      <part file="../layers/layers_strings.grdp" />
+      <part file="../linear_memory_inspector/linear_memory_inspector_strings.grdp" />
       <part file="../main/main_strings.grdp" />
       <part file="../media/media_strings.grdp" />
       <part file="../mobile_throttling/mobile_throttling_strings.grdp" />
@@ -59,16 +58,12 @@
       <part file="../screencast/screencast_strings.grdp" />
       <part file="../sdk/sdk_strings.grdp" />
       <part file="../search/search_strings.grdp" />
-      <part file="../security/security_strings.grdp" />
       <part file="../snippets/snippets_strings.grdp" />
       <part file="../source_frame/source_frame_strings.grdp" />
       <part file="../sources/sources_strings.grdp" />
-      <part file="../text_editor/text_editor_strings.grdp" />
       <part file="../timeline/timeline_strings.grdp" />
       <part file="../timeline_model/timeline_model_strings.grdp" />
       <part file="../ui/ui_strings.grdp" />
-      <part file="../web_audio/web_audio_strings.grdp" />
-      <part file="../webauthn/webauthn_strings.grdp" />
       <part file="../workspace/workspace_strings.grdp" />
       <part file="shared_strings.grdp" />
     </messages>

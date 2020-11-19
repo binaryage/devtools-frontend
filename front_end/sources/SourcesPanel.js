@@ -29,6 +29,7 @@ import * as Common from '../common/common.js';
 import * as Extensions from '../extensions/extensions.js';
 import * as Host from '../host/host.js';
 import * as ObjectUI from '../object_ui/object_ui.js';
+import * as Recorder from '../recorder/recorder.js';
 import * as Root from '../root/root.js';
 import * as SDK from '../sdk/sdk.js';
 import * as Snippets from '../snippets/snippets.js';
@@ -62,17 +63,17 @@ export class SourcesPanel extends UI.Panel.Panel {
         this._handleDrop.bind(this));
 
     this._workspace = Workspace.Workspace.WorkspaceImpl.instance();
-    /** @type {!UI.Action.Action }*/
+    /** @type {!UI.ActionRegistration.Action }*/
     this._togglePauseAction = (UI.ActionRegistry.ActionRegistry.instance().action('debugger.toggle-pause'));
-    /** @type {!UI.Action.Action }*/
+    /** @type {!UI.ActionRegistration.Action }*/
     this._stepOverAction = (UI.ActionRegistry.ActionRegistry.instance().action('debugger.step-over'));
-    /** @type {!UI.Action.Action }*/
+    /** @type {!UI.ActionRegistration.Action }*/
     this._stepIntoAction = (UI.ActionRegistry.ActionRegistry.instance().action('debugger.step-into'));
-    /** @type {!UI.Action.Action }*/
+    /** @type {!UI.ActionRegistration.Action }*/
     this._stepOutAction = (UI.ActionRegistry.ActionRegistry.instance().action('debugger.step-out'));
-    /** @type {!UI.Action.Action }*/
+    /** @type {!UI.ActionRegistration.Action }*/
     this._stepAction = (UI.ActionRegistry.ActionRegistry.instance().action('debugger.step'));
-    /** @type {!UI.Action.Action }*/
+    /** @type {!UI.ActionRegistration.Action }*/
     this._toggleBreakpointsActiveAction =
         (UI.ActionRegistry.ActionRegistry.instance().action('debugger.toggle-breakpoints-active'));
 
@@ -600,6 +601,22 @@ export class SourcesPanel extends UI.Panel.Panel {
     }
   }
 
+  _toggleRecording() {
+    const uiSourceCode = this._sourcesView.currentUISourceCode();
+    if (!uiSourceCode) {
+      return;
+    }
+    const target = UI.Context.Context.instance().flavor(SDK.SDKModel.Target);
+    if (!target) {
+      return;
+    }
+    const recorderModel = target.model(Recorder.RecorderModel.RecorderModel);
+    if (!recorderModel) {
+      return;
+    }
+    recorderModel.toggleRecording(uiSourceCode);
+  }
+
   /**
    * @param {!Common.EventTarget.EventTargetEvent} event
    */
@@ -908,7 +925,7 @@ export class SourcesPanel extends UI.Panel.Panel {
       return;
     }
     const openText = Common.UIString.UIString('Open in Sources panel');
-    /** @type {function(?):*} */
+    /** @type {function():*} */
     const callback = this.showUILocation.bind(this, uiSourceCode.uiLocation(0, 0));
     contextMenu.revealSection().appendItem(openText, callback);
   }
@@ -1172,7 +1189,7 @@ export class DebuggerPausedDetailsRevealer {
 }
 
 /**
- * @implements {UI.ActionDelegate.ActionDelegate}
+ * @implements {UI.ActionRegistration.ActionDelegate}
  * @unrestricted
  */
 export class RevealingActionDelegate {
@@ -1197,7 +1214,7 @@ export class RevealingActionDelegate {
 }
 
 /**
- * @implements {UI.ActionDelegate.ActionDelegate}
+ * @implements {UI.ActionRegistration.ActionDelegate}
  * @unrestricted
  */
 export class DebuggingActionDelegate {
@@ -1228,6 +1245,10 @@ export class DebuggingActionDelegate {
       }
       case 'debugger.run-snippet': {
         panel._runSnippet();
+        return true;
+      }
+      case 'recorder.toggle-recording': {
+        panel._toggleRecording();
         return true;
       }
       case 'debugger.toggle-breakpoints-active': {

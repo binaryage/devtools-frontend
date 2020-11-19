@@ -140,6 +140,333 @@
   "devices/ModuleUIStrings.js | usb": {
     "message": "usb"
   },
+  "layer_viewer/LayerDetailsView.js | compositingReasons": {
+    "message": "Compositing Reasons"
+  },
+  "layer_viewer/LayerDetailsView.js | containingBlocRectangleDimensions": {
+    "message": "Containing Block {PH1} × {PH2} (at {PH3}, {PH4})"
+  },
+  "layer_viewer/LayerDetailsView.js | hasABackdropFilter": {
+    "message": "Has a backdrop filter."
+  },
+  "layer_viewer/LayerDetailsView.js | hasABlendingEffectThatNeedsToBe": {
+    "message": "Has a blending effect that needs to be known by compositor because of composited descendants."
+  },
+  "layer_viewer/LayerDetailsView.js | hasAClipThatNeedsToBeKnownBy": {
+    "message": "Has a clip that needs to be known by compositor because of composited descendants."
+  },
+  "layer_viewer/LayerDetailsView.js | hasADTransform": {
+    "message": "Has a 3d transform."
+  },
+  "layer_viewer/LayerDetailsView.js | hasAFilterEffectThatNeedsToBe": {
+    "message": "Has a filter effect that needs to be known by compositor because of composited descendants."
+  },
+  "layer_viewer/LayerDetailsView.js | hasAMaskThatNeedsToBeKnownBy": {
+    "message": "Has a mask that needs to be known by compositor because of composited descendants."
+  },
+  "layer_viewer/LayerDetailsView.js | hasAnActiveAcceleratedBackdrop": {
+    "message": "Has an active accelerated backdrop filter animation or transition."
+  },
+  "layer_viewer/LayerDetailsView.js | hasAnActiveAcceleratedFilter": {
+    "message": "Has an active accelerated filter animation or transition."
+  },
+  "layer_viewer/LayerDetailsView.js | hasAnActiveAcceleratedOpacity": {
+    "message": "Has an active accelerated opacity animation or transition."
+  },
+  "layer_viewer/LayerDetailsView.js | hasAnActiveAcceleratedTransform": {
+    "message": "Has an active accelerated transform animation or transition."
+  },
+  "layer_viewer/LayerDetailsView.js | hasAPerspectiveTransformThat": {
+    "message": "Has a perspective transform that needs to be known by compositor because of 3d descendants."
+  },
+  "layer_viewer/LayerDetailsView.js | hasAPreservesdPropertyThatNeeds": {
+    "message": "Has a preserves-3d property that needs to be known by compositor because of 3d descendants."
+  },
+  "layer_viewer/LayerDetailsView.js | hasAReflectionThatNeedsToBeKnown": {
+    "message": "Has a reflection that needs to be known by compositor because of composited descendants."
+  },
+  "layer_viewer/LayerDetailsView.js | hasAWillchangeCompositingHint": {
+    "message": "Has a will-change compositing hint other than transform and opacity."
+  },
+  "layer_viewer/LayerDetailsView.js | hasAWillchangeOpacityCompositing": {
+    "message": "Has a will-change: opacity compositing hint."
+  },
+  "layer_viewer/LayerDetailsView.js | hasAWillchangeTransform": {
+    "message": "Has a will-change: transform compositing hint."
+  },
+  "layer_viewer/LayerDetailsView.js | hasBackfacevisibilityHidden": {
+    "message": "Has backface-visibility: hidden."
+  },
+  "layer_viewer/LayerDetailsView.js | hasClippingAncestor": {
+    "message": "Has clipping ancestor."
+  },
+  "layer_viewer/LayerDetailsView.js | hasOpacityThatNeedsToBeAppliedBy": {
+    "message": "Has opacity that needs to be applied by compositor because of composited descendants."
+  },
+  "layer_viewer/LayerDetailsView.js | isAnAcceleratedCanvasOrIsA": {
+    "message": "Is an accelerated canvas, or is a display list backed canvas that was promoted to a layer based on a performance heuristic."
+  },
+  "layer_viewer/LayerDetailsView.js | isAnAcceleratedIframe": {
+    "message": "Is an accelerated iFrame."
+  },
+  "layer_viewer/LayerDetailsView.js | isAnAcceleratedPlugin": {
+    "message": "Is an accelerated plugin."
+  },
+  "layer_viewer/LayerDetailsView.js | isAnAcceleratedVideo": {
+    "message": "Is an accelerated video."
+  },
+  "layer_viewer/LayerDetailsView.js | isAPositionfixedElementWith": {
+    "message": "Is a position:fixed element with composited descendants."
+  },
+  "layer_viewer/LayerDetailsView.js | isAScrollableOverflowElement": {
+    "message": "Is a scrollable overflow element."
+  },
+  "layer_viewer/LayerDetailsView.js | isDomOverlayForWebxrImmersivear": {
+    "message": "Is DOM overlay for WebXR immersive-ar mode."
+  },
+  "layer_viewer/LayerDetailsView.js | isFixedOrStickyPosition": {
+    "message": "Is fixed or sticky position."
+  },
+  "layer_viewer/LayerDetailsView.js | isOverlayControlsForVideo": {
+    "message": "Is overlay controls for video."
+  },
+  "layer_viewer/LayerDetailsView.js | isTheDocumentrootscroller": {
+    "message": "Is the document.rootScroller."
+  },
+  "layer_viewer/LayerDetailsView.js | isTheRootLayer": {
+    "message": "Is the root layer."
+  },
+  "layer_viewer/LayerDetailsView.js | layerForLinkHighlightFrame": {
+    "message": "Layer for link highlight, frame overlay, etc."
+  },
+  "layer_viewer/LayerDetailsView.js | layerPaintedOnTopOfOtherLayersAs": {
+    "message": "Layer painted on top of other layers as decoration."
+  },
+  "layer_viewer/LayerDetailsView.js | layerWasSeparatelyComposited": {
+    "message": "Layer was separately composited because it could not be squashed."
+  },
+  "layer_viewer/LayerDetailsView.js | mainThreadScrollingReason": {
+    "message": "Main thread scrolling reason"
+  },
+  "layer_viewer/LayerDetailsView.js | memoryEstimate": {
+    "message": "Memory estimate"
+  },
+  "layer_viewer/LayerDetailsView.js | mightOverlapOtherComposited": {
+    "message": "Might overlap other composited content."
+  },
+  "layer_viewer/LayerDetailsView.js | nearestLayerShiftingContaining": {
+    "message": "Nearest Layer Shifting Containing Block"
+  },
+  "layer_viewer/LayerDetailsView.js | nearestLayerShiftingStickyBox": {
+    "message": "Nearest Layer Shifting Sticky Box"
+  },
+  "layer_viewer/LayerDetailsView.js | nonFastScrollable": {
+    "message": "Non fast scrollable"
+  },
+  "layer_viewer/LayerDetailsView.js | overlapsOtherCompositedContent": {
+    "message": "Overlaps other composited content."
+  },
+  "layer_viewer/LayerDetailsView.js | paintCount": {
+    "message": "Paint count"
+  },
+  "layer_viewer/LayerDetailsView.js | paintProfiler": {
+    "message": "Paint Profiler"
+  },
+  "layer_viewer/LayerDetailsView.js | parentWithCompositedNegative": {
+    "message": "Parent with composited negative z-index content."
+  },
+  "layer_viewer/LayerDetailsView.js | repaintsOnScroll": {
+    "message": "Repaints on scroll"
+  },
+  "layer_viewer/LayerDetailsView.js | scrollParentIsNotAnAncestor": {
+    "message": "Scroll parent is not an ancestor."
+  },
+  "layer_viewer/LayerDetailsView.js | scrollRectangleDimensions": {
+    "message": "{PH1} {PH2} × {PH3} (at {PH4}, {PH5})"
+  },
+  "layer_viewer/LayerDetailsView.js | secondaryLayerHomeForAGroupOf": {
+    "message": "Secondary layer, home for a group of squashable content."
+  },
+  "layer_viewer/LayerDetailsView.js | secondaryLayerNoopLayerToPlace": {
+    "message": "Secondary layer, no-op layer to place the squashing layer correctly in the composited layer tree."
+  },
+  "layer_viewer/LayerDetailsView.js | secondaryLayerTheHorizontal": {
+    "message": "Secondary layer, the horizontal scrollbar layer."
+  },
+  "layer_viewer/LayerDetailsView.js | secondaryLayerTheOverflow": {
+    "message": "Secondary layer, the overflow controls host layer."
+  },
+  "layer_viewer/LayerDetailsView.js | secondaryLayerTheScrollCorner": {
+    "message": "Secondary layer, the scroll corner layer."
+  },
+  "layer_viewer/LayerDetailsView.js | secondaryLayerTheVertical": {
+    "message": "Secondary layer, the vertical scrollbar layer."
+  },
+  "layer_viewer/LayerDetailsView.js | secondaryLayerToContainAnyNormal": {
+    "message": "Secondary layer, to contain any normal flow and positive z-index contents on top of a negative z-index layer."
+  },
+  "layer_viewer/LayerDetailsView.js | secondaryLayerToContainTheMask": {
+    "message": "Secondary layer, to contain the mask contents."
+  },
+  "layer_viewer/LayerDetailsView.js | secondaryLayerToHouseContents": {
+    "message": "Secondary layer, to house contents that can be scrolled."
+  },
+  "layer_viewer/LayerDetailsView.js | secondaryLayerUsedToPositionThe": {
+    "message": "Secondary layer, used to position the scrolling contents while scrolling."
+  },
+  "layer_viewer/LayerDetailsView.js | selectALayerToSeeItsDetails": {
+    "message": "Select a layer to see its details"
+  },
+  "layer_viewer/LayerDetailsView.js | shouldIsolateDescendantsToApplyA": {
+    "message": "Should isolate descendants to apply a blend effect."
+  },
+  "layer_viewer/LayerDetailsView.js | size": {
+    "message": "Size"
+  },
+  "layer_viewer/LayerDetailsView.js | slowScrollRegions": {
+    "message": "Slow scroll regions"
+  },
+  "layer_viewer/LayerDetailsView.js | stickyAncenstorLayersS": {
+    "message": "{PH1}: {PH2} ({PH3})"
+  },
+  "layer_viewer/LayerDetailsView.js | stickyBoxRectangleDimensions": {
+    "message": "Sticky Box {PH1} × {PH2} (at {PH3}, {PH4})"
+  },
+  "layer_viewer/LayerDetailsView.js | stickyPositionConstraint": {
+    "message": "Sticky position constraint"
+  },
+  "layer_viewer/LayerDetailsView.js | touchEventHandler": {
+    "message": "Touch event handler"
+  },
+  "layer_viewer/LayerDetailsView.js | unnamed": {
+    "message": "<unnamed>"
+  },
+  "layer_viewer/LayerDetailsView.js | updateRectangleDimensions": {
+    "message": "{PH1} × {PH2} (at {PH3},{PH4})"
+  },
+  "layer_viewer/LayerDetailsView.js | wheelEventHandler": {
+    "message": "Wheel event handler"
+  },
+  "layer_viewer/Layers3DView.js | cantDisplayLayers": {
+    "message": "Can't display layers,"
+  },
+  "layer_viewer/Layers3DView.js | checkSForPossibleReasons": {
+    "message": "Check {PH1} for possible reasons."
+  },
+  "layer_viewer/Layers3DView.js | dLayersView": {
+    "message": "3D Layers View"
+  },
+  "layer_viewer/Layers3DView.js | layerInformationIsNotYet": {
+    "message": "Layer information is not yet available."
+  },
+  "layer_viewer/Layers3DView.js | mousewheelEventListener": {
+    "message": "mousewheel event listener"
+  },
+  "layer_viewer/Layers3DView.js | paints": {
+    "message": "Paints"
+  },
+  "layer_viewer/Layers3DView.js | repaintsOnScroll": {
+    "message": "repaints on scroll"
+  },
+  "layer_viewer/Layers3DView.js | resetView": {
+    "message": "Reset View"
+  },
+  "layer_viewer/Layers3DView.js | showPaintProfiler": {
+    "message": "Show Paint Profiler"
+  },
+  "layer_viewer/Layers3DView.js | slowScrollRects": {
+    "message": "Slow scroll rects"
+  },
+  "layer_viewer/Layers3DView.js | touchEventListener": {
+    "message": "touch event listener"
+  },
+  "layer_viewer/Layers3DView.js | webglSupportIsDisabledInYour": {
+    "message": "WebGL support is disabled in your browser."
+  },
+  "layer_viewer/LayerTreeOutline.js | layersTreePane": {
+    "message": "Layers Tree Pane"
+  },
+  "layer_viewer/LayerTreeOutline.js | showPaintProfiler": {
+    "message": "Show Paint Profiler"
+  },
+  "layer_viewer/LayerTreeOutline.js | updateChildDimension": {
+    "message": " ({PH1} × {PH2})"
+  },
+  "layer_viewer/LayerViewHost.js | showInternalLayers": {
+    "message": "Show internal layers"
+  },
+  "layer_viewer/ModuleUIStrings.js | layers": {
+    "message": "Layers"
+  },
+  "layer_viewer/ModuleUIStrings.js | panOrRotateDown": {
+    "message": "Pan or rotate down"
+  },
+  "layer_viewer/ModuleUIStrings.js | panOrRotateLeft": {
+    "message": "Pan or rotate left"
+  },
+  "layer_viewer/ModuleUIStrings.js | panOrRotateRight": {
+    "message": "Pan or rotate right"
+  },
+  "layer_viewer/ModuleUIStrings.js | panOrRotateUp": {
+    "message": "Pan or rotate up"
+  },
+  "layer_viewer/ModuleUIStrings.js | resetView": {
+    "message": "Reset view"
+  },
+  "layer_viewer/ModuleUIStrings.js | switchToPanMode": {
+    "message": "Switch to pan mode"
+  },
+  "layer_viewer/ModuleUIStrings.js | switchToRotateMode": {
+    "message": "Switch to rotate mode"
+  },
+  "layer_viewer/ModuleUIStrings.js | zoomIn": {
+    "message": "Zoom in"
+  },
+  "layer_viewer/ModuleUIStrings.js | zoomOut": {
+    "message": "Zoom out"
+  },
+  "layer_viewer/PaintProfilerView.js | bitmap": {
+    "message": "Bitmap"
+  },
+  "layer_viewer/PaintProfilerView.js | commandLog": {
+    "message": "Command Log"
+  },
+  "layer_viewer/PaintProfilerView.js | misc": {
+    "message": "Misc"
+  },
+  "layer_viewer/PaintProfilerView.js | profiling": {
+    "message": "Profiling…"
+  },
+  "layer_viewer/PaintProfilerView.js | profilingResults": {
+    "message": "Profiling results"
+  },
+  "layer_viewer/PaintProfilerView.js | shapes": {
+    "message": "Shapes"
+  },
+  "layer_viewer/PaintProfilerView.js | text": {
+    "message": "Text"
+  },
+  "layer_viewer/TransformController.js | panModeX": {
+    "message": "Pan mode (X)"
+  },
+  "layer_viewer/TransformController.js | resetTransform": {
+    "message": "Reset transform (0)"
+  },
+  "layer_viewer/TransformController.js | rotateModeV": {
+    "message": "Rotate mode (V)"
+  },
+  "layers/LayersPanel.js | details": {
+    "message": "Details"
+  },
+  "layers/LayersPanel.js | profiler": {
+    "message": "Profiler"
+  },
+  "layers/ModuleUIStrings.js | layers": {
+    "message": "Layers"
+  },
+  "recorder/RecordingFileSystem.js | defaultRecordingName": {
+    "message": "Recording #{nextId}"
+  },
   "resources/ClearStorageView.js | storageQuotaUsed": {
     "message": "{PH1} used out of {PH2} storage quota"
   },
@@ -148,6 +475,342 @@
   },
   "resources/ClearStorageView.js | storageWithCustomMarker": {
     "message": "{PH1} (custom)"
+  },
+  "security/ModuleUIStrings.js | security": {
+    "message": "Security"
+  },
+  "security/SecurityModel.js | cipherWithMAC": {
+    "message": "{PH1} with {PH2}"
+  },
+  "security/SecurityModel.js | keyExchangeWithGroup": {
+    "message": "{PH1} with {PH2}"
+  },
+  "security/SecurityModel.js | theSecurityOfThisPageIsUnknown": {
+    "message": "The security of this page is unknown."
+  },
+  "security/SecurityModel.js | thisPageIsNotSecure": {
+    "message": "This page is not secure."
+  },
+  "security/SecurityModel.js | thisPageIsNotSecureBrokenHttps": {
+    "message": "This page is not secure (broken HTTPS)."
+  },
+  "security/SecurityModel.js | thisPageIsSecureValidHttps": {
+    "message": "This page is secure (valid HTTPS)."
+  },
+  "security/SecurityPanel.js | activeContentWithCertificate": {
+    "message": "active content with certificate errors"
+  },
+  "security/SecurityPanel.js | activeMixedContent": {
+    "message": "active mixed content"
+  },
+  "security/SecurityPanel.js | allResourcesOnThisPageAreServed": {
+    "message": "All resources on this page are served securely."
+  },
+  "security/SecurityPanel.js | allServedSecurely": {
+    "message": "all served securely"
+  },
+  "security/SecurityPanel.js | blockedMixedContent": {
+    "message": "Blocked mixed content"
+  },
+  "security/SecurityPanel.js | certificate": {
+    "message": "Certificate"
+  },
+  "security/SecurityPanel.js | certificateExpiresSoon": {
+    "message": "Certificate expires soon"
+  },
+  "security/SecurityPanel.js | certificateTransparency": {
+    "message": "Certificate Transparency"
+  },
+  "security/SecurityPanel.js | chromeHasDeterminedThatThisSite": {
+    "message": "Chrome has determined that this site could be fake or fraudulent.\n\nIf you believe this is shown in error please visit https://bugs.chromium.org/p/chromium/issues/entry?template=Safety+Tips+Appeals."
+  },
+  "security/SecurityPanel.js | cipher": {
+    "message": "Cipher"
+  },
+  "security/SecurityPanel.js | connection": {
+    "message": "Connection"
+  },
+  "security/SecurityPanel.js | contentWithCertificateErrors": {
+    "message": "content with certificate errors"
+  },
+  "security/SecurityPanel.js | dataWasEnteredInAFieldOnA": {
+    "message": "Data was entered in a field on a non-secure page. A warning has been added to the URL bar."
+  },
+  "security/SecurityPanel.js | flaggedByGoogleSafeBrowsing": {
+    "message": "Flagged by Google Safe Browsing"
+  },
+  "security/SecurityPanel.js | formFieldEditedOnANonsecurePage": {
+    "message": "Form field edited on a non-secure page"
+  },
+  "security/SecurityPanel.js | hashAlgorithm": {
+    "message": "Hash algorithm"
+  },
+  "security/SecurityPanel.js | hideFullDetails": {
+    "message": "Hide full details"
+  },
+  "security/SecurityPanel.js | info": {
+    "message": "Info"
+  },
+  "security/SecurityPanel.js | insecureSha": {
+    "message": "insecure (SHA-1)"
+  },
+  "security/SecurityPanel.js | issuedAt": {
+    "message": "Issued at"
+  },
+  "security/SecurityPanel.js | issuer": {
+    "message": "Issuer"
+  },
+  "security/SecurityPanel.js | keyExchange": {
+    "message": "Key exchange"
+  },
+  "security/SecurityPanel.js | keyExchangeGroup": {
+    "message": "Key exchange group"
+  },
+  "security/SecurityPanel.js | logId": {
+    "message": "Log ID"
+  },
+  "security/SecurityPanel.js | logName": {
+    "message": "Log name"
+  },
+  "security/SecurityPanel.js | mainOrigin": {
+    "message": "Main origin"
+  },
+  "security/SecurityPanel.js | mainOriginNonsecure": {
+    "message": "Main origin (non-secure)"
+  },
+  "security/SecurityPanel.js | mainOriginSecure": {
+    "message": "Main origin (secure)"
+  },
+  "security/SecurityPanel.js | missing": {
+    "message": "missing"
+  },
+  "security/SecurityPanel.js | mixedContent": {
+    "message": "mixed content"
+  },
+  "security/SecurityPanel.js | na": {
+    "message": "(n/a)"
+  },
+  "security/SecurityPanel.js | nonsecureForm": {
+    "message": "non-secure form"
+  },
+  "security/SecurityPanel.js | nonsecureOrigins": {
+    "message": "Non-secure origins"
+  },
+  "security/SecurityPanel.js | noSecurityDetailsAreAvailableFor": {
+    "message": "No security details are available for this origin."
+  },
+  "security/SecurityPanel.js | noSecurityInformation": {
+    "message": "No security information"
+  },
+  "security/SecurityPanel.js | notSecure": {
+    "message": "Not secure"
+  },
+  "security/SecurityPanel.js | notSecureBroken": {
+    "message": "Not secure (broken)"
+  },
+  "security/SecurityPanel.js | obsoleteConnectionSettings": {
+    "message": "obsolete connection settings"
+  },
+  "security/SecurityPanel.js | openFullCertificateDetails": {
+    "message": "Open full certificate details"
+  },
+  "security/SecurityPanel.js | origin": {
+    "message": "Origin"
+  },
+  "security/SecurityPanel.js | overview": {
+    "message": "Overview"
+  },
+  "security/SecurityPanel.js | possibleSpoofingUrl": {
+    "message": "Possible spoofing URL"
+  },
+  "security/SecurityPanel.js | protocol": {
+    "message": "Protocol"
+  },
+  "security/SecurityPanel.js | publickeypinningBypassed": {
+    "message": "Public-Key-Pinning bypassed"
+  },
+  "security/SecurityPanel.js | publickeypinningWasBypassedByA": {
+    "message": "Public-Key-Pinning was bypassed by a local root certificate."
+  },
+  "security/SecurityPanel.js | reloadThePageToRecordRequestsFor": {
+    "message": "Reload the page to record requests for HTTP resources."
+  },
+  "security/SecurityPanel.js | reloadToViewDetails": {
+    "message": "Reload to view details"
+  },
+  "security/SecurityPanel.js | resources": {
+    "message": "Resources"
+  },
+  "security/SecurityPanel.js | rsaKeyExchangeIsObsoleteEnableAn": {
+    "message": "RSA key exchange is obsolete. Enable an ECDHE-based cipher suite."
+  },
+  "security/SecurityPanel.js | san": {
+    "message": "SAN"
+  },
+  "security/SecurityPanel.js | sct": {
+    "message": "SCT"
+  },
+  "security/SecurityPanel.js | secure": {
+    "message": "Secure"
+  },
+  "security/SecurityPanel.js | secureConnectionSettings": {
+    "message": "secure connection settings"
+  },
+  "security/SecurityPanel.js | secureOrigins": {
+    "message": "Secure origins"
+  },
+  "security/SecurityPanel.js | securityOverview": {
+    "message": "Security overview"
+  },
+  "security/SecurityPanel.js | showFullDetails": {
+    "message": "Show full details"
+  },
+  "security/SecurityPanel.js | showLess": {
+    "message": "Show less"
+  },
+  "security/SecurityPanel.js | showMoreSTotal": {
+    "message": "Show more ({PH1} total)"
+  },
+  "security/SecurityPanel.js | signatureAlgorithm": {
+    "message": "Signature algorithm"
+  },
+  "security/SecurityPanel.js | signatureData": {
+    "message": "Signature data"
+  },
+  "security/SecurityPanel.js | sIsObsoleteEnableAnAesgcmbased": {
+    "message": "{PH1} is obsolete. Enable an AES-GCM-based cipher suite."
+  },
+  "security/SecurityPanel.js | sIsObsoleteEnableTlsOrLater": {
+    "message": "{PH1} is obsolete. Enable TLS 1.2 or later."
+  },
+  "security/SecurityPanel.js | source": {
+    "message": "Source"
+  },
+  "security/SecurityPanel.js | subject": {
+    "message": "Subject"
+  },
+  "security/SecurityPanel.js | subjectAlternativeNameMissing": {
+    "message": "Subject Alternative Name missing"
+  },
+  "security/SecurityPanel.js | theCertificateChainForThisSite": {
+    "message": "The certificate chain for this site contains a certificate signed using SHA-1."
+  },
+  "security/SecurityPanel.js | theCertificateForThisSiteDoesNot": {
+    "message": "The certificate for this site does not contain a Subject Alternative Name extension containing a domain name or IP address."
+  },
+  "security/SecurityPanel.js | theCertificateForThisSiteExpires": {
+    "message": "The certificate for this site expires in less than 48 hours and needs to be renewed."
+  },
+  "security/SecurityPanel.js | theConnectionToThisSiteIs": {
+    "message": "The connection to this site is encrypted and authenticated using {PH1}, {PH2}, and {PH3}."
+  },
+  "security/SecurityPanel.js | theConnectionToThisSiteIsUsingA": {
+    "message": "The connection to this site is using a valid, trusted server certificate issued by {PH1}."
+  },
+  "security/SecurityPanel.js | theSecurityDetailsAboveAreFrom": {
+    "message": "The security details above are from the first inspected response."
+  },
+  "security/SecurityPanel.js | theSecurityOfThisPageIsUnknown": {
+    "message": "The security of this page is unknown."
+  },
+  "security/SecurityPanel.js | theServerSignatureUsesShaWhichIs": {
+    "message": "The server signature uses SHA-1, which is obsolete. Enable a SHA-2 signature algorithm instead. (Note this is different from the signature in the certificate.)"
+  },
+  "security/SecurityPanel.js | thisIsAnErrorPage": {
+    "message": "This is an error page."
+  },
+  "security/SecurityPanel.js | thisOriginIsANonhttpsSecure": {
+    "message": "This origin is a non-HTTPS secure origin."
+  },
+  "security/SecurityPanel.js | thisPageHasANonhttpsSecureOrigin": {
+    "message": "This page has a non-HTTPS secure origin."
+  },
+  "security/SecurityPanel.js | thisPageIncludesAFormWithA": {
+    "message": "This page includes a form with a non-secure \"action\" attribute."
+  },
+  "security/SecurityPanel.js | thisPageIncludesHttpResources": {
+    "message": "This page includes HTTP resources."
+  },
+  "security/SecurityPanel.js | thisPageIncludesResourcesThat": {
+    "message": "This page includes resources that were loaded with certificate errors."
+  },
+  "security/SecurityPanel.js | thisPageIsDangerousFlaggedBy": {
+    "message": "This page is dangerous (flagged by Google Safe Browsing)."
+  },
+  "security/SecurityPanel.js | thisPageIsInsecureUnencrypted": {
+    "message": "This page is insecure (unencrypted HTTP)."
+  },
+  "security/SecurityPanel.js | thisPageIsNotSecure": {
+    "message": "This page is not secure."
+  },
+  "security/SecurityPanel.js | thisPageIsNotSecureBrokenHttps": {
+    "message": "This page is not secure (broken HTTPS)."
+  },
+  "security/SecurityPanel.js | thisPageIsSecureValidHttps": {
+    "message": "This page is secure (valid HTTPS)."
+  },
+  "security/SecurityPanel.js | thisPageIsSuspicious": {
+    "message": "This page is suspicious"
+  },
+  "security/SecurityPanel.js | thisPageIsSuspiciousFlaggedBy": {
+    "message": "This page is suspicious (flagged by Chrome)."
+  },
+  "security/SecurityPanel.js | thisRequestCompliesWithChromes": {
+    "message": "This request complies with Chrome's Certificate Transparency policy."
+  },
+  "security/SecurityPanel.js | thisRequestDoesNotComplyWith": {
+    "message": "This request does not comply with Chrome's Certificate Transparency policy."
+  },
+  "security/SecurityPanel.js | thisResponseWasLoadedFromCache": {
+    "message": "This response was loaded from cache. Some security details might be missing."
+  },
+  "security/SecurityPanel.js | thisSiteIsMissingAValidTrusted": {
+    "message": "This site is missing a valid, trusted certificate ({PH1})."
+  },
+  "security/SecurityPanel.js | thisSitesHostnameLooksSimilarToS": {
+    "message": "This site's hostname looks similar to {PH1}. Attackers sometimes mimic sites by making small, hard-to-see changes to the domain name.\n\nIf you believe this is shown in error please visit https://bugs.chromium.org/p/chromium/issues/entry?template=Safety+Tips+Appeals."
+  },
+  "security/SecurityPanel.js | toCheckThisPagesStatusVisit": {
+    "message": "To check this page's status, visit g.co/safebrowsingstatus."
+  },
+  "security/SecurityPanel.js | unknownCanceled": {
+    "message": "Unknown / canceled"
+  },
+  "security/SecurityPanel.js | validAndTrusted": {
+    "message": "valid and trusted"
+  },
+  "security/SecurityPanel.js | validationStatus": {
+    "message": "Validation status"
+  },
+  "security/SecurityPanel.js | validFrom": {
+    "message": "Valid from"
+  },
+  "security/SecurityPanel.js | validUntil": {
+    "message": "Valid until"
+  },
+  "security/SecurityPanel.js | viewCertificate": {
+    "message": "View certificate"
+  },
+  "security/SecurityPanel.js | viewDRequestInNetworkPanel": {
+    "message": "View {PH1} request in Network Panel"
+  },
+  "security/SecurityPanel.js | viewDRequestsInNetworkPanel": {
+    "message": "View {PH1} requests in Network Panel"
+  },
+  "security/SecurityPanel.js | viewRequestsInNetworkPanel": {
+    "message": "View requests in Network Panel"
+  },
+  "security/SecurityPanel.js | youHaveRecentlyAllowedContent": {
+    "message": "You have recently allowed content loaded with certificate errors (such as scripts or iframes) to run on this site."
+  },
+  "security/SecurityPanel.js | youHaveRecentlyAllowedNonsecure": {
+    "message": "You have recently allowed non-secure content (such as scripts or iframes) to run on this site."
+  },
+  "security/SecurityPanel.js | yourConnectionToThisOriginIsNot": {
+    "message": "Your connection to this origin is not secure."
+  },
+  "security/SecurityPanel.js | yourPageRequestedNonsecure": {
+    "message": "Your page requested non-secure resources that were blocked."
   },
   "settings/FrameworkBlackboxSettingsTab.js | addFilenamePattern": {
     "message": "Add filename pattern"
@@ -283,5 +946,140 @@
   },
   "settings/SettingsScreen.js | warning": {
     "message": "WARNING:"
+  },
+  "text_editor/CodeMirrorTextEditor.js | codeEditor": {
+    "message": "Code editor"
+  },
+  "web_audio/AudioContextContentBuilder.js | audiocontext": {
+    "message": "AudioContext"
+  },
+  "web_audio/AudioContextContentBuilder.js | callbackBufferSize": {
+    "message": "Callback Buffer Size"
+  },
+  "web_audio/AudioContextContentBuilder.js | callbackInterval": {
+    "message": "Callback Interval"
+  },
+  "web_audio/AudioContextContentBuilder.js | currentTime": {
+    "message": "Current Time"
+  },
+  "web_audio/AudioContextContentBuilder.js | maxOutputChannels": {
+    "message": "Max Output Channels"
+  },
+  "web_audio/AudioContextContentBuilder.js | offlineaudiocontext": {
+    "message": "OfflineAudioContext"
+  },
+  "web_audio/AudioContextContentBuilder.js | renderCapacity": {
+    "message": "Render Capacity"
+  },
+  "web_audio/AudioContextContentBuilder.js | sampleRate": {
+    "message": "Sample Rate"
+  },
+  "web_audio/AudioContextContentBuilder.js | state": {
+    "message": "State"
+  },
+  "web_audio/AudioContextSelector.js | audioContextS": {
+    "message": "Audio context: {PH1}"
+  },
+  "web_audio/AudioContextSelector.js | noRecordings": {
+    "message": "(no recordings)"
+  },
+  "web_audio/ModuleUIStrings.js | audio": {
+    "message": "audio"
+  },
+  "web_audio/ModuleUIStrings.js | webaudio": {
+    "message": "WebAudio"
+  },
+  "web_audio/WebAudioView.js | openAPageThatUsesWebAudioApiTo": {
+    "message": "Open a page that uses Web Audio API to start monitoring."
+  },
+  "webauthn/ModuleUIStrings.js | webauthn": {
+    "message": "WebAuthn"
+  },
+  "webauthn/WebauthnPane.js | actions": {
+    "message": "Actions"
+  },
+  "webauthn/WebauthnPane.js | active": {
+    "message": "Active"
+  },
+  "webauthn/WebauthnPane.js | add": {
+    "message": "Add"
+  },
+  "webauthn/WebauthnPane.js | addAuthenticator": {
+    "message": "Add authenticator"
+  },
+  "webauthn/WebauthnPane.js | authenticatorS": {
+    "message": "Authenticator {PH1}"
+  },
+  "webauthn/WebauthnPane.js | credentials": {
+    "message": "Credentials"
+  },
+  "webauthn/WebauthnPane.js | editName": {
+    "message": "Edit name"
+  },
+  "webauthn/WebauthnPane.js | enableVirtualAuthenticator": {
+    "message": "Enable virtual authenticator environment"
+  },
+  "webauthn/WebauthnPane.js | export": {
+    "message": "Export"
+  },
+  "webauthn/WebauthnPane.js | id": {
+    "message": "ID"
+  },
+  "webauthn/WebauthnPane.js | isResident": {
+    "message": "Is Resident"
+  },
+  "webauthn/WebauthnPane.js | learnMore": {
+    "message": "Learn more"
+  },
+  "webauthn/WebauthnPane.js | newAuthenticator": {
+    "message": "New authenticator"
+  },
+  "webauthn/WebauthnPane.js | no": {
+    "message": "No"
+  },
+  "webauthn/WebauthnPane.js | noCredentialsTryCallingSFromYour": {
+    "message": "No credentials. Try calling {PH1} from your website."
+  },
+  "webauthn/WebauthnPane.js | privateKeypem": {
+    "message": "Private key.pem"
+  },
+  "webauthn/WebauthnPane.js | protocol": {
+    "message": "Protocol"
+  },
+  "webauthn/WebauthnPane.js | remove": {
+    "message": "Remove"
+  },
+  "webauthn/WebauthnPane.js | rpId": {
+    "message": "RP ID"
+  },
+  "webauthn/WebauthnPane.js | saveName": {
+    "message": "Save name"
+  },
+  "webauthn/WebauthnPane.js | setSAsTheActiveAuthenticator": {
+    "message": "Set {PH1} as the active authenticator"
+  },
+  "webauthn/WebauthnPane.js | signCount": {
+    "message": "Sign Count"
+  },
+  "webauthn/WebauthnPane.js | supportsResidentKeys": {
+    "message": "Supports resident keys"
+  },
+  "webauthn/WebauthnPane.js | supportsUserVerification": {
+    "message": "Supports user verification"
+  },
+  "webauthn/WebauthnPane.js | transport": {
+    "message": "Transport"
+  },
+  "webauthn/WebauthnPane.js | userHandle": {
+    "message": "User Handle"
+  },
+  "webauthn/WebauthnPane.js | useWebauthnForPhishingresistant": {
+    "message": "Use WebAuthn for phishing-resistant authentication"
+  },
+  "webauthn/WebauthnPane.js | uuid": {
+    "message": "UUID"
+  },
+  "webauthn/WebauthnPane.js | yes": {
+    "message": "Yes"
   }
 }

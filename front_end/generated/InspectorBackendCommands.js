@@ -782,6 +782,10 @@ export function registerCommands(inspectorBackend) {
   inspectorBackend.registerEnum(
       'DOMDebugger.DOMBreakpointType',
       {SubtreeModified: 'subtree-modified', AttributeModified: 'attribute-modified', NodeRemoved: 'node-removed'});
+  inspectorBackend.registerEnum('DOMDebugger.CSPViolationType', {
+    TrustedtypeSinkViolation: 'trustedtype-sink-violation',
+    TrustedtypePolicyViolation: 'trustedtype-policy-violation'
+  });
   inspectorBackend.registerCommand(
       'DOMDebugger.getEventListeners',
       [
@@ -804,6 +808,8 @@ export function registerCommands(inspectorBackend) {
       'DOMDebugger.removeInstrumentationBreakpoint', [{'name': 'eventName', 'type': 'string', 'optional': false}], []);
   inspectorBackend.registerCommand(
       'DOMDebugger.removeXHRBreakpoint', [{'name': 'url', 'type': 'string', 'optional': false}], []);
+  inspectorBackend.registerCommand(
+      'DOMDebugger.setBreakOnCSPViolation', [{'name': 'violationTypes', 'type': 'object', 'optional': false}], []);
   inspectorBackend.registerCommand(
       'DOMDebugger.setDOMBreakpoint',
       [{'name': 'nodeId', 'type': 'number', 'optional': false}, {'name': 'type', 'type': 'string', 'optional': false}],
@@ -1735,6 +1741,8 @@ export function registerCommands(inspectorBackend) {
   inspectorBackend.registerCommand(
       'Overlay.setShowGridOverlays', [{'name': 'gridNodeHighlightConfigs', 'type': 'object', 'optional': false}], []);
   inspectorBackend.registerCommand(
+      'Overlay.setShowFlexOverlays', [{'name': 'flexNodeHighlightConfigs', 'type': 'object', 'optional': false}], []);
+  inspectorBackend.registerCommand(
       'Overlay.setShowPaintRects', [{'name': 'result', 'type': 'boolean', 'optional': false}], []);
   inspectorBackend.registerCommand(
       'Overlay.setShowLayoutShiftRegions', [{'name': 'result', 'type': 'boolean', 'optional': false}], []);
@@ -1808,7 +1816,7 @@ export function registerCommands(inspectorBackend) {
   inspectorBackend.registerEvent('Page.fileChooserOpened', ['frameId', 'backendNodeId', 'mode']);
   inspectorBackend.registerEvent('Page.frameAttached', ['frameId', 'parentFrameId', 'stack']);
   inspectorBackend.registerEvent('Page.frameClearedScheduledNavigation', ['frameId']);
-  inspectorBackend.registerEvent('Page.frameDetached', ['frameId']);
+  inspectorBackend.registerEvent('Page.frameDetached', ['frameId', 'reason']);
   inspectorBackend.registerEvent('Page.frameNavigated', ['frame']);
   inspectorBackend.registerEvent('Page.documentOpened', ['frame']);
   inspectorBackend.registerEvent('Page.frameResized', []);
@@ -1847,7 +1855,8 @@ export function registerCommands(inspectorBackend) {
       [
         {'name': 'format', 'type': 'string', 'optional': true}, {'name': 'quality', 'type': 'number', 'optional': true},
         {'name': 'clip', 'type': 'object', 'optional': true},
-        {'name': 'fromSurface', 'type': 'boolean', 'optional': true}
+        {'name': 'fromSurface', 'type': 'boolean', 'optional': true},
+        {'name': 'captureBeyondViewport', 'type': 'boolean', 'optional': true}
       ],
       ['data']);
   inspectorBackend.registerEnum('Page.CaptureSnapshotRequestFormat', {MHTML: 'mhtml'});

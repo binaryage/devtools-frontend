@@ -14,13 +14,15 @@
   "dependencies": [
     "common",
     "data_grid",
+    "i18n",
     "platform",
     "ui",
     "host"
   ],
   "modules": [
-    "webauthn.js",
-    "WebauthnPane.js",
+    "webauthn-legacy.js"
+  ],
+  "skip_compilation": [
     "webauthn-legacy.js"
   ],
   "resources": [

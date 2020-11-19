@@ -196,6 +196,41 @@
     },
     {
       "type": "action",
+      "actionId": "recorder.toggle-recording",
+      "experiment": "recorder",
+      "category": "Recorder",
+      "className": "Sources.SourcesPanel.DebuggingActionDelegate",
+      "title": "Start Recording",
+      "iconClass": "largeicon-start-recording",
+      "toggleable": true,
+      "toggledIconClass": "largeicon-stop-recording",
+      "toggleWithRedColor": true,
+      "options": [
+        {
+          "value": true,
+          "title": "Record"
+        },
+        {
+          "value": false,
+          "title": "Stop"
+        }
+      ],
+      "contextTypes": [
+        "Sources.SourcesView"
+      ],
+      "bindings": [
+        {
+          "platform": "windows,linux",
+          "shortcut": "Ctrl+E"
+        },
+        {
+          "platform": "mac",
+          "shortcut": "Meta+E"
+        }
+      ]
+    },
+    {
+      "type": "action",
       "category": "Debugger",
       "actionId": "debugger.toggle-breakpoints-active",
       "iconClass": "largeicon-deactivate-breakpoints",
@@ -369,6 +404,16 @@
       "className": "Sources.SearchSourcesView"
     },
     {
+      "type": "view",
+      "location": "navigator-view",
+      "id": "navigator-recordings",
+      "title": "Recordings",
+      "order": 8,
+      "persistence": "permanent",
+      "className": "Sources.RecordingsNavigatorView",
+      "experiment": "recorder"
+    },
+    {
       "type": "@Sources.NavigatorView",
       "viewId": "navigator-network",
       "className": "Sources.NetworkNavigatorView"
@@ -382,6 +427,12 @@
       "type": "@Sources.NavigatorView",
       "viewId": "navigator-snippets",
       "className": "Sources.SnippetsNavigatorView"
+    },
+    {
+      "type": "@Sources.NavigatorView",
+      "viewId": "navigator-recordings",
+      "className": "Sources.RecordingsNavigatorView",
+      "experiment": "recorder"
     },
     {
       "type": "action",
@@ -978,6 +1029,16 @@
       "className": "Sources.JavaScriptBreakpointsSidebarPane"
     },
     {
+      "type": "@UI.ContextMenu.Provider",
+      "actionId": "sources.open-memory-inspector",
+      "className": "Sources.ScopeChainSidebarPane.OpenLinearMemoryInspector",
+      "experiment": "wasmDWARFDebugging",
+      "title": "Open memory inspector",
+      "contextTypes": [
+        "ObjectUI.ObjectPropertyTreeElement"
+      ]
+    },
+    {
       "type": "@UI.ContextFlavorListener",
       "contextTypes": [
         "SDK.DebuggerPausedDetails"
@@ -1136,44 +1197,14 @@
     "event_listeners",
     "object_ui",
     "formatter",
-    "coverage"
+    "coverage",
+    "linear_memory_inspector"
   ],
   "modules": [
-    "sources.js",
-    "sources-legacy.js",
-    "AddSourceMapURLDialog.js",
-    "BreakpointEditDialog.js",
-    "CallStackSidebarPane.js",
-    "DebuggerPausedMessage.js",
-    "EditingLocationHistoryManager.js",
-    "FilePathScoreFunction.js",
-    "FilteredUISourceCodeListProvider.js",
-    "GoToLineQuickOpen.js",
-    "SourceMapNamesResolver.js",
-    "JavaScriptBreakpointsSidebarPane.js",
-    "UISourceCodeFrame.js",
-    "Plugin.js",
-    "DebuggerPlugin.js",
-    "CoveragePlugin.js",
-    "CSSPlugin.js",
-    "GutterDiffPlugin.js",
-    "SearchSourcesView.js",
-    "NavigatorView.js",
-    "ScopeChainSidebarPane.js",
-    "SourcesNavigator.js",
-    "OutlineQuickOpen.js",
-    "TabbedEditorContainer.js",
-    "WatchExpressionsSidebarPane.js",
-    "ThreadsSidebarPane.js",
-    "ScriptFormatterEditorAction.js",
-    "InplaceFormatterEditorAction.js",
-    "OpenFileQuickOpen.js",
-    "SourcesView.js",
-    "SourcesSearchScope.js",
-    "SourcesPanel.js",
-    "JavaScriptCompilerPlugin.js",
-    "SnippetsPlugin.js",
-    "ScriptOriginPlugin.js"
+    "sources-legacy.js"
+  ],
+  "skip_compilation": [
+    "sources-legacy.js"
   ],
   "resources": [
     "breakpointEditDialog.css",

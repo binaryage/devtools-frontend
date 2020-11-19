@@ -3674,6 +3674,14 @@ declare namespace Protocol {
     }
 
     /**
+     * CSP Violation type.
+     */
+    export enum CSPViolationType {
+      TrustedtypeSinkViolation = 'trustedtype-sink-violation',
+      TrustedtypePolicyViolation = 'trustedtype-policy-violation',
+    }
+
+    /**
      * Object event listener.
      */
     export interface EventListener {
@@ -3777,6 +3785,13 @@ declare namespace Protocol {
        * Resource URL substring.
        */
       url: string;
+    }
+
+    export interface SetBreakOnCSPViolationRequest {
+      /**
+       * CSP Violations to stop upon.
+       */
+      violationTypes: CSPViolationType[];
     }
 
     export interface SetDOMBreakpointRequest {
@@ -8352,6 +8367,22 @@ declare namespace Protocol {
        * The style of the separator between items
        */
       itemSeparator?: LineStyle;
+      /**
+       * Style of content-distribution space on the main axis (justify-content).
+       */
+      mainDistributedSpace?: BoxStyle;
+      /**
+       * Style of content-distribution space on the cross axis (align-content).
+       */
+      crossDistributedSpace?: BoxStyle;
+      /**
+       * Style of empty space caused by row gaps (gap/row-gap).
+       */
+      rowGapSpace?: BoxStyle;
+      /**
+       * Style of empty space caused by columns gaps (gap/column-gap).
+       */
+      columnGapSpace?: BoxStyle;
     }
 
     export enum LineStylePattern {
@@ -8371,6 +8402,20 @@ declare namespace Protocol {
        * The line pattern (default: solid)
        */
       pattern?: LineStylePattern;
+    }
+
+    /**
+     * Style information for drawing a box.
+     */
+    export interface BoxStyle {
+      /**
+       * The background color for the box (default: transparent)
+       */
+      fillColor?: DOM.RGBA;
+      /**
+       * The hatching color for the box (default: transparent)
+       */
+      hatchColor?: DOM.RGBA;
     }
 
     /**
@@ -8457,6 +8502,17 @@ declare namespace Protocol {
        * A descriptor for the highlight appearance.
        */
       gridHighlightConfig: GridHighlightConfig;
+      /**
+       * Identifier of the node to highlight.
+       */
+      nodeId: DOM.NodeId;
+    }
+
+    export interface FlexNodeHighlightConfig {
+      /**
+       * A descriptor for the highlight appearance of flex containers.
+       */
+      flexContainerHighlightConfig: FlexContainerHighlightConfig;
       /**
        * Identifier of the node to highlight.
        */
@@ -8691,6 +8747,13 @@ declare namespace Protocol {
        * An array of node identifiers and descriptors for the highlight appearance.
        */
       gridNodeHighlightConfigs: GridNodeHighlightConfig[];
+    }
+
+    export interface SetShowFlexOverlaysRequest {
+      /**
+       * An array of node identifiers and descriptors for the highlight appearance.
+       */
+      flexNodeHighlightConfigs: FlexNodeHighlightConfig[];
     }
 
     export interface SetShowPaintRectsRequest {
@@ -9307,6 +9370,10 @@ declare namespace Protocol {
        * Capture the screenshot from the surface, rather than the view. Defaults to true.
        */
       fromSurface?: boolean;
+      /**
+       * Capture the screenshot beyond the viewport. Defaults to false.
+       */
+      captureBeyondViewport?: boolean;
     }
 
     export interface CaptureScreenshotResponse extends ProtocolResponseWithError {
@@ -9953,6 +10020,11 @@ declare namespace Protocol {
       frameId: FrameId;
     }
 
+    export enum FrameDetachedEventReason {
+      Remove = 'remove',
+      Swap = 'swap',
+    }
+
     /**
      * Fired when frame has been detached from its parent.
      */
@@ -9961,6 +10033,7 @@ declare namespace Protocol {
        * Id of the frame that has been detached.
        */
       frameId: FrameId;
+      reason: FrameDetachedEventReason;
     }
 
     /**
@@ -13271,6 +13344,7 @@ declare namespace Protocol {
     export enum PausedEventReason {
       Ambiguous = 'ambiguous',
       Assert = 'assert',
+      CSPViolation = 'CSPViolation',
       DebugCommand = 'debugCommand',
       DOM = 'DOM',
       EventListener = 'EventListener',

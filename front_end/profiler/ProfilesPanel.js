@@ -80,9 +80,10 @@ export class ProfilesPanel extends UI.Panel.PanelWithSidebar {
     this.panelSidebarElement().insertBefore(toolbarContainerLeft, this.panelSidebarElement().firstChild);
     const toolbar = new UI.Toolbar.Toolbar('', toolbarContainerLeft);
 
-    /** @type {!UI.Action.Action} */
+    /** @type {!UI.ActionRegistration.Action} */
     this._toggleRecordAction =
-        /** @type {!UI.Action.Action} */ (UI.ActionRegistry.ActionRegistry.instance().action(recordingActionId));
+        /** @type {!UI.ActionRegistration.Action} */ (
+            UI.ActionRegistry.ActionRegistry.instance().action(recordingActionId));
     this._toggleRecordButton = UI.Toolbar.Toolbar.createActionButton(this._toggleRecordAction);
     toolbar.appendToolbarItem(this._toggleRecordButton);
 
@@ -669,7 +670,7 @@ export class ProfileGroupSidebarTreeElement extends UI.TreeOutline.TreeElement {
     super('', true);
     this.selectable = false;
     this._dataDisplayDelegate = dataDisplayDelegate;
-    this._title = title;
+    this._profileTitle = title;
     this.expand();
     this.toggleOnClick = true;
   }
@@ -698,7 +699,7 @@ export class ProfileGroupSidebarTreeElement extends UI.TreeOutline.TreeElement {
     this.listItemElement.createChild('div', 'titles no-subtitle')
         .createChild('span', 'title-container')
         .createChild('span', 'title')
-        .textContent = this._title;
+        .textContent = this._profileTitle;
   }
 }
 
@@ -735,7 +736,7 @@ export class ProfilesSidebarTreeElement extends UI.TreeOutline.TreeElement {
 }
 
 /**
- * @implements {UI.ActionDelegate.ActionDelegate}
+ * @implements {UI.ActionRegistration.ActionDelegate}
  */
 export class JSProfilerPanel extends ProfilesPanel {
   constructor() {

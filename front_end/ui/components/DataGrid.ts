@@ -4,7 +4,7 @@
 
 import * as LitHtml from '../../third_party/lit-html/lit-html.js';
 
-import {calculateColumnWidthPercentageFromWeighting, calculateFirstFocusableCell, Cell, CellPosition, Column, getRowEntryForColumnId, handleArrowKeyNavigation, keyIsArrowKey, renderCellValue, Row, SortDirection, SortState, stringValueForCell} from './DataGridUtils.js';
+import {calculateColumnWidthPercentageFromWeighting, calculateFirstFocusableCell, Cell, CellPosition, Column, getRowEntryForColumnId, handleArrowKeyNavigation, keyIsArrowKey, renderCellValue, Row, SortDirection, SortState} from './DataGridUtils.js';
 
 export interface DataGridData {
   columns: Column[];
@@ -224,21 +224,21 @@ export class DataGrid extends HTMLElement {
     return undefined;
   }
 
-  private renderEmptyRow() {
+
+  private renderFillerRow() {
     const visibleColumns = this.columns.filter(col => !col.hidden);
     const emptyCells = visibleColumns.map((col, colIndex) => {
       const emptyCellClasses = LitHtml.Directives.classMap({
         firstVisibleColumn: colIndex === 0,
       });
-      return LitHtml.html`<td class=${emptyCellClasses}></td>`;
+      return LitHtml.html`<td tabindex="-1" class=${emptyCellClasses}></td>`;
     });
-    return LitHtml.html`<tr>${emptyCells}</tr>`;
+    return LitHtml.html`<tr tabindex="-1" class="filler-row">${emptyCells}</tr>`;
   }
 
   private render() {
     const indexOfFirstVisibleColumn = this.columns.findIndex(col => !col.hidden);
     const anyColumnsSortable = this.columns.some(col => col.sortable === true);
-    const visibleRowsCount = this.rows.filter(row => !row.hidden).length;
     // Disabled until https://crbug.com/1079231 is fixed.
     // clang-format off
     LitHtml.render(LitHtml.html`
@@ -314,6 +314,24 @@ export class DataGrid extends HTMLElement {
         display: none;
       }
 
+      .filler-row {
+        /**
+        * The filler row is only there to stylistically fill grid lines down to the
+        * bottom, we don't want users to be able to focus into it (it's got tabIndex
+        * of -1) nor should they be able to click into it.
+        */
+        pointer-events: none;
+      }
+
+      .filler-row td {
+        /* By making the filler row cells 100% they take up any extra height,
+         * leaving the cells with content to be the regular height, and the
+         * final filler row to be as high as it needs to be to fill the empty
+         * space.
+         */
+        height: 100%;
+      }
+
       [aria-sort]:hover {
         cursor: pointer;
       }
@@ -376,7 +394,7 @@ export class DataGrid extends HTMLElement {
           </tr>
         </thead>
         <tbody>
-          ${visibleRowsCount === 0 ? this.renderEmptyRow() : this.rows.map((row, rowIndex) => {
+          ${this.rows.map((row, rowIndex) => {
             const focusableCell = this.getCurrentlyFocusableCell();
             const [,focusableCellRowIndex] = this.focusableCell;
 
@@ -402,11 +420,10 @@ export class DataGrid extends HTMLElement {
                   firstVisibleColumn: columnIndex === indexOfFirstVisibleColumn,
                 });
                 const cellIsFocusableCell = columnIndex === this.focusableCell[0] && tableRowIndex === this.focusableCell[1];
-                const cellTextValue = stringValueForCell(cell);
                 const cellOutput = renderCellValue(cell);
                 return LitHtml.html`<td
                   class=${cellClasses}
-                  title=${cellTextValue}
+                  title=${cell.title || String(cell.value)}
                   tabindex=${cellIsFocusableCell ? '0' : '-1'}
                   aria-colindex=${columnIndex + 1}
                   data-row-index=${tableRowIndex}
@@ -422,6 +439,7 @@ export class DataGrid extends HTMLElement {
               })}
             `;
           })}
+         ${this.renderFillerRow()}
         </tbody>
       </table>
     </div>
