@@ -806,17 +806,6 @@ export class TextPrompt extends Common.ObjectWrapper.ObjectWrapper {
     }
   }
 
-  moveCaretToIndex(index) {
-    const selection = this._element.getComponentSelection();
-    const selectionRange = this._createRange();
-
-    selectionRange.setStart(this._element.firstChild, index);
-    selectionRange.setEnd(this._element.firstChild, index);
-
-    selection.removeAllRanges();
-    selection.addRange(selectionRange);
-  }
-
   /**
    * @return {number} -1 if no caret can be found in text prompt
    */

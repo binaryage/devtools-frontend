@@ -175,17 +175,6 @@ export class ConsoleDiracPrompt extends UI.TextPrompt.TextPrompt {
     this._codeMirror.setCursor(this._codeMirror.lastLine() + 1, 0, null);
   }
 
-  /**
-   * @override
-   * @param {number} index
-   */
-  moveCaretToIndex(index) {
-    // @ts-ignore
-    const pos = this._codeMirror.posFromIndex(index);
-    // @ts-ignore
-    this._codeMirror.setCursor(pos, null, null);
-  }
-
   finishAutocomplete() {
     const diracAngel = Common.getDiracAngel();
     if (diracAngel.toggles.DEBUG_COMPLETIONS) {

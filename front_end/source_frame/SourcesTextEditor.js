@@ -43,6 +43,7 @@ export class SourcesTextEditor extends TextEditor.CodeMirrorTextEditor.CodeMirro
 
     this._delegate = delegate;
 
+    const diracAngel = Common.getDiracAngel();
     if (diracAngel.toggles.hasInlineCFs) {
       this.codeMirror().on('update', this._update.bind(this));
     }
@@ -633,6 +634,10 @@ export class SourcesTextEditor extends TextEditor.CodeMirrorTextEditor.CodeMirro
     this.setMimeType(this.mimeType());
   }
 
+  /**
+   * @param {*} element
+   * @param {number} startIndex
+   */
   _reverseZOrder(element, startIndex) {
     if (!element) {
       return;
@@ -651,6 +656,9 @@ export class SourcesTextEditor extends TextEditor.CodeMirrorTextEditor.CodeMirro
     }
   }
 
+  /**
+   * @param {*} codeMirror
+   */
   _update(codeMirror) {
     const linesDiv = codeMirror.display.lineDiv;
     // custom formatters can provide expandable decoration widgets,

@@ -139,6 +139,7 @@ export class ObjectPropertiesSection extends UI.TreeOutline.TreeOutlineInShadow 
   }
 
   /**
+   * @param {!SDK.RemoteObject.RemoteObjectProperty} property
    * @return {number}
    */
   static PropertyCluster(property) {
@@ -175,8 +176,8 @@ export class ObjectPropertiesSection extends UI.TreeOutline.TreeOutlineInShadow 
   static CompareProperties(propertyA, propertyB) {
     const diracAngel = Common.getDiracAngel();
     if (diracAngel.toggles.hasClusteredLocals) {
-      const clusterA = ObjectUI.ObjectPropertiesSection.PropertyCluster(propertyA);
-      const clusterB = ObjectUI.ObjectPropertiesSection.PropertyCluster(propertyB);
+      const clusterA = ObjectPropertiesSection.PropertyCluster(propertyA);
+      const clusterB = ObjectPropertiesSection.PropertyCluster(propertyB);
 
       if (clusterA > clusterB) {
         return 1;
@@ -224,12 +225,12 @@ export class ObjectPropertiesSection extends UI.TreeOutline.TreeOutlineInShadow 
    * @param {?string} name
    * @param {boolean=} isPrivate
    * @param {string=} friendlyName
-   * @param {string=} friendlyNameNum
+   * @param {number=} friendlyNameNum
    * @return {!Element}
    */
   static createNameElement(name, isPrivate, friendlyName, friendlyNameNum) {
     if (friendlyName) {
-      let numHtml = '';
+      let numHtml;
       if (friendlyNameNum) {
         numHtml = UI.Fragment.html`<sub class="friendly-num">${friendlyNameNum}</sub>`;
       }
@@ -817,6 +818,7 @@ export class ObjectPropertyTreeElement extends UI.TreeOutline.TreeElement {
     }
 
     const diracAngel = Common.getDiracAngel();
+    /** @type {Object.<string,number>} */
     const friendlyNamesTable = {};
     let previousProperty = null;
     const tailProperties = [];
@@ -829,7 +831,7 @@ export class ObjectPropertyTreeElement extends UI.TreeOutline.TreeElement {
       }
 
       if (diracAngel.toggles.hasClusteredLocals) {
-        property._cluster = ObjectUI.ObjectPropertiesSection.PropertyCluster(property);
+        property._cluster = ObjectPropertiesSection.PropertyCluster(property);
         if (previousProperty && property._cluster !== previousProperty._cluster) {
           property._afterClusterBoundary = true;
           previousProperty._beforeClusterBoundary = true;
@@ -1165,7 +1167,7 @@ export class ObjectPropertyTreeElement extends UI.TreeOutline.TreeElement {
       UI.Tooltip.Tooltip.install(this.valueElement, Common.UIString.UIString('No property getter'));
     }
 
-    if (this.property._cluster !== undefined) {
+    if (this.property._cluster) {
       const clusterClass = 'cluster-' + this.property._cluster;
       this.listItemElement.classList.add(clusterClass);
     }

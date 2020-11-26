@@ -855,6 +855,16 @@ export class RemoteObjectProperty {
     }
     this.private = !!isPrivate;
 
+    // dirac
+    /** @type {number|undefined} */
+    this._cluster;
+    /** @type {string|undefined} */
+    this._friendlyName;
+    this._afterClusterBoundary = false;
+    this._beforeClusterBoundary = false;
+    /** @type {number|undefined} */
+    this._friendlyNameNum;
+
     /** @type {(!RemoteObject|undefined)} */
     this.getter;
     /** @type {(!RemoteObject|undefined)} */
