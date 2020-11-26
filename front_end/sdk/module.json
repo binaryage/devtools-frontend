@@ -83,13 +83,7 @@
       "type": "setting",
       "settingName": "skipStackFramesPattern",
       "settingType": "regex",
-      "defaultValue": [
-        {"pattern":"cljs/.*\\.cljs$"},
-        {"pattern":"clojure/.*\\.cljs$"},
-        {"pattern":"goog/.*\\.js$"},
-        {"pattern":"devtools/.*\\.cljs$"},
-        {"pattern":"dirac/runtime/.*\\.cljs$"}
-      ]
+      "defaultValue": "cljs/.*\\.cljs$|clojure/.*\\.cljs$|goog/.*\\.js$|devtools/.*\\.cljs$|dirac/runtime/.*\\.cljs$"
     },
     {
       "type": "setting",
