@@ -87,22 +87,6 @@ export class Runtime {
   }
 
   /**
-   * @param {string} url
-   * @return {!Promise.<!ArrayBuffer>}
-   */
-  loadBinaryResourcePromise(url) {
-    return internalLoadResourcePromise(url, true);
-  }
-
-  /**
-   * @param {string} url
-   * @return {!Promise.<string>}
-   */
-  loadTextResourcePromise(url) {
-    return internalLoadResourcePromise(url, false);
-  }
-
-  /**
    * http://tools.ietf.org/html/rfc3986#section-5.2.4
    * @param {string} path
    * @return {string}
@@ -178,10 +162,10 @@ export class Runtime {
   }
 
   /**
-   * @param {!ModuleDescriptor|!RuntimeExtensionDescriptor} descriptor
+   * @param {!{experiment: (?string|undefined), condition: (?string|undefined)}} descriptor
    * @return {boolean}
    */
-  static _isDescriptorEnabled(descriptor) {
+  static isDescriptorEnabled(descriptor) {
     const activatorExperiment = descriptor['experiment'];
     if (activatorExperiment === '*') {
       return true;
@@ -602,6 +586,15 @@ export class RuntimeExtensionDescriptor {
     this.setting;
     /** @type {?string} */
     this.name;
+
+    /** @type {string} */
+    this.fileName;
+
+    /** @type {!Array<string>|undefined} */
+    this.mimeTypes;
+
+    /** @type {!Array<string>|undefined} */
+    this.dependencies;
   }
 }
 
@@ -653,7 +646,7 @@ export class Module {
    * @return {boolean}
    */
   enabled() {
-    return Runtime._isDescriptorEnabled(this._descriptor);
+    return Runtime.isDescriptorEnabled(this._descriptor);
   }
 
   /**
@@ -790,7 +783,7 @@ export class Extension {
   * @return {boolean}
   */
   enabled() {
-    return this._module.enabled() && Runtime._isDescriptorEnabled(this.descriptor());
+    return this._module.enabled() && Runtime.isDescriptorEnabled(this.descriptor());
   }
 
   /**
@@ -1066,13 +1059,10 @@ class Experiment {
 }
 
 /**
- * @private
  * @param {string} url
- * @param {boolean} asBinary
- * @template T
- * @return {!Promise.<T>}
+ * @return {!Promise.<string>}
  */
-function internalLoadResourcePromise(url, asBinary) {
+export function loadResourcePromise(url) {
   return new Promise(load);
 
   /**
@@ -1082,9 +1072,6 @@ function internalLoadResourcePromise(url, asBinary) {
   function load(fulfill, reject) {
     const xhr = new XMLHttpRequest();
     xhr.open('GET', url, true);
-    if (asBinary) {
-      xhr.responseType = 'arraybuffer';
-    }
     xhr.onreadystatechange = onreadystatechange;
 
     /**
@@ -1097,10 +1084,8 @@ function internalLoadResourcePromise(url, asBinary) {
 
       const {response} = /** @type {*} */ (e.target);
 
-      const text = asBinary ? new TextDecoder().decode(response) : response;
-
       // DevTools Proxy server can mask 404s as 200s, check the body to be sure
-      const status = /^HTTP\/1.1 404/.test(text) ? 404 : xhr.status;
+      const status = /^HTTP\/1.1 404/.test(response) ? 404 : xhr.status;
 
       if ([0, 200, 304].indexOf(status) === -1)  // Testing harness file:/// results in 0.
       {
@@ -1111,14 +1096,6 @@ function internalLoadResourcePromise(url, asBinary) {
     }
     xhr.send(null);
   }
-}
-
-/**
- * @param {string} url
- * @return {!Promise.<string>}
- */
-export function loadResourcePromise(url) {
-  return internalLoadResourcePromise(url, false);
 }
 
 /**

@@ -237,7 +237,7 @@ export class CSSPlugin extends Plugin {
     }
     const swatch = InlineEditor.Swatches.BezierSwatch.create();
     swatch.setBezierText(text);
-    swatch.iconElement().title = Common.UIString.UIString('Open cubic bezier editor.');
+    UI.Tooltip.Tooltip.install(swatch.iconElement(), Common.UIString.UIString('Open cubic bezier editor.'));
     swatch.iconElement().addEventListener('click', this._swatchIconClicked.bind(this, swatch), false);
     swatch.hideText(true);
     return swatch;
@@ -266,7 +266,7 @@ export class CSSPlugin extends Plugin {
     }
     this._currentSwatch = swatch;
 
-    if (swatch.localName === 'devtools-color-swatch') {
+    if (InlineEditor.ColorSwatch.ColorSwatch.isColorSwatch(swatch)) {
       this._showSpectrum(/** @type {!InlineEditor.ColorSwatch.ColorSwatch} */ (swatch));
     } else if (swatch instanceof InlineEditor.Swatches.BezierSwatch) {
       this._showBezierEditor(swatch);
@@ -303,7 +303,7 @@ export class CSSPlugin extends Plugin {
       return;
     }
 
-    if (this._currentSwatch.localName === 'devtools-color-swatch') {
+    if (InlineEditor.ColorSwatch.ColorSwatch.isColorSwatch(this._currentSwatch)) {
       const swatch = /** @type {!InlineEditor.ColorSwatch.ColorSwatch} */ (this._currentSwatch);
       swatch.renderColor(color);
     }

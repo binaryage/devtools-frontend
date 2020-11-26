@@ -111,6 +111,11 @@ export class DebuggerModel extends SDKModel {
     this._computeAutoStepRangesCallback = null;
     /** @type {?function(!Array<!CallFrame>):!Promise<!Array<!CallFrame>>} */
     this._expandCallFramesCallback = null;
+    /** @type {?function(!CallFrame, !EvaluationOptions):!Promise<?EvaluationResult>} */
+    this._evaluateOnCallFrameCallback = null;
+
+    /** @type {boolean} */
+    this._ignoreDebuggerPausedEvents = false;
 
     /** @type {!Common.ObjectWrapper.ObjectWrapper} */
     this._breakpointResolvedEventTarget = new Common.ObjectWrapper.ObjectWrapper();
@@ -174,6 +179,13 @@ export class DebuggerModel extends SDKModel {
    */
   debuggerEnabled() {
     return !!this._debuggerEnabled;
+  }
+
+  /**
+   * @param {boolean} ignore
+   */
+  ignoreDebuggerPausedEvents(ignore) {
+    this._ignoreDebuggerPausedEvents = ignore;
   }
 
   /**
@@ -685,6 +697,13 @@ export class DebuggerModel extends SDKModel {
   }
 
   /**
+   * @param {?function(!CallFrame, !EvaluationOptions):!Promise<?EvaluationResult>} callback
+   */
+  setEvaluateOnCallFrameCallback(callback) {
+    this._evaluateOnCallFrameCallback = callback;
+  }
+
+  /**
    * @param {!Array<!Protocol.Debugger.CallFrame>} callFrames
    * @param {string} reason
    * @param {!Object|undefined} auxData
@@ -695,6 +714,10 @@ export class DebuggerModel extends SDKModel {
    */
   async _pausedScript(
       callFrames, reason, auxData, breakpointIds, asyncStackTrace, asyncStackTraceId, asyncCallStackTraceId) {
+    if (this._ignoreDebuggerPausedEvents) {
+      return;
+    }
+
     if (asyncCallStackTraceId) {
       // Note: this is only to support old backends. Newer ones do not send asyncCallStackTraceId.
       _scheduledPauseOnAsyncCall = asyncCallStackTraceId;
@@ -781,21 +804,16 @@ export class DebuggerModel extends SDKModel {
     this._registerScript(script);
     this.dispatchEventToListeners(Events.ParsedScriptSource, script);
 
-    // @ts-ignore
-    const pluginManager = Bindings.DebuggerWorkspaceBinding.instance().pluginManager;
-    if (!Root.Runtime.experiments.isEnabled('wasmDWARFDebugging') || !pluginManager ||
-        !pluginManager.hasPluginForScript(script)) {
-      const sourceMapId = DebuggerModel._sourceMapId(script.executionContextId, script.sourceURL, script.sourceMapURL);
-      if (sourceMapId && !hasSyntaxError) {
-        // Consecutive script evaluations in the same execution context with the same sourceURL
-        // and sourceMappingURL should result in source map reloading.
-        const previousScript = this._sourceMapIdToScript.get(sourceMapId);
-        if (previousScript) {
-          this._sourceMapManager.detachSourceMap(previousScript);
-        }
-        this._sourceMapIdToScript.set(sourceMapId, script);
-        this._sourceMapManager.attachSourceMap(script, script.sourceURL, script.sourceMapURL);
+    const sourceMapId = DebuggerModel._sourceMapId(script.executionContextId, script.sourceURL, script.sourceMapURL);
+    if (sourceMapId && !hasSyntaxError) {
+      // Consecutive script evaluations in the same execution context with the same sourceURL
+      // and sourceMappingURL should result in source map reloading.
+      const previousScript = this._sourceMapIdToScript.get(sourceMapId);
+      if (previousScript) {
+        this._sourceMapManager.detachSourceMap(previousScript);
       }
+      this._sourceMapIdToScript.set(sourceMapId, script);
+      this._sourceMapManager.attachSourceMap(script, script.sourceURL, script.sourceMapURL);
     }
 
     const isDiscardable = hasSyntaxError && script.isAnonymousScript();
@@ -1494,8 +1512,6 @@ export class CallFrame {
    */
   constructor(debuggerModel, script, payload, inlineFrameIndex, functionName) {
     this.debuggerModel = debuggerModel;
-    /** @type {?Promise<?Array<!ScopeChainEntry>>} */
-    this._sourceScopeChain = null;
     this._script = script;
     this._payload = payload;
     this._location = Location.fromPayload(debuggerModel, payload.location, inlineFrameIndex);
@@ -1516,20 +1532,6 @@ export class CallFrame {
     }
     this._returnValue =
         payload.returnValue ? this.debuggerModel._runtimeModel.createRemoteObject(payload.returnValue) : null;
-  }
-
-  /**
-   * @return {!Promise<?Array<!ScopeChainEntry>>}
-   */
-  get sourceScopeChain() {
-    if (this._sourceScopeChain) {
-      return this._sourceScopeChain;
-    }
-    // @ts-ignore
-    const pluginManager = Bindings.DebuggerWorkspaceBinding.instance().pluginManager;
-    const sourceScopeChain = pluginManager ? pluginManager.resolveScopeChain(this) : Promise.resolve(null);
-    this._sourceScopeChain = sourceScopeChain;
-    return sourceScopeChain;
   }
 
   /**
@@ -1654,7 +1656,9 @@ export class CallFrame {
    * @return {!Promise<!EvaluationResult>}
    */
   async evaluate(options) {
-    const runtimeModel = this.debuggerModel.runtimeModel();
+    const debuggerModel = this.debuggerModel;
+    const runtimeModel = debuggerModel.runtimeModel();
+
     // Assume backends either support both throwOnSideEffect and timeout options or neither.
     const needsTerminationOptions = !!options.throwOnSideEffect || options.timeout !== undefined;
     if (needsTerminationOptions &&
@@ -1663,14 +1667,10 @@ export class CallFrame {
       return {error: 'Side-effect checks not supported by backend.'};
     }
 
-    if (this._script && this._script.isWasm()) {
-      // @ts-ignore
-      const pluginManager = Bindings.DebuggerWorkspaceBinding.instance().pluginManager;
-      if (Root.Runtime.experiments.isEnabled('wasmDWARFDebugging') && pluginManager) {
-        const result = await pluginManager.evaluateExpression(options.expression, this);
-        if (result) {
-          return result;
-        }
+    if (debuggerModel._evaluateOnCallFrameCallback) {
+      const result = await debuggerModel._evaluateOnCallFrameCallback(this, options);
+      if (result) {
+        return result;
       }
     }
 

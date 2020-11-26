@@ -44,6 +44,7 @@ DEPS = {
     "@types/puppeteer": "5.4.0",
     "@typescript-eslint/parser": "4.7.0",
     "@typescript-eslint/eslint-plugin": "4.7.0",
+    "bl": "4.0.3",
     "chai": "4.2.0",
     "escodegen": "2.0.0",
     "eslint": "7.13.0",
@@ -56,6 +57,7 @@ DEPS = {
     "karma-coverage": "2.0.3",
     "karma-mocha": "2.0.1",
     "karma-sourcemap-loader": "0.3.8",
+    "karma-spec-reporter": "0.0.32",
     "license-checker": "25.0.1",
     "mocha": "8.2.1",
     "puppeteer": "5.4.1",
@@ -66,7 +68,7 @@ DEPS = {
     "source-map-support": "0.5.19",
     "stylelint": "13.5.0",
     "stylelint-config-standard": "20.0.0",
-    "typescript": "4.1.1-rc",
+    "typescript": "4.1.2",
     "yargs": "15.3.1",
 }
 

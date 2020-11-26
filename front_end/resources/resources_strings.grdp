@@ -21,6 +21,9 @@
   <message name="IDS_DEVTOOLS_06933067aafd48425d67bcb01bba5cb6" desc="Text in Service Workers View of the Application panel">
     Update
   </message>
+  <message name="IDS_DEVTOOLS_07ba8a9247a0f91e025d8036a28c3b56" desc="A tag of Application Panel that can be searched in the command menu">
+    pwa
+  </message>
   <message name="IDS_DEVTOOLS_092bf78f9c97ba171b8232ddff585392" desc="Section header in the Frame Details view">
     Additional Information
   </message>
@@ -130,6 +133,9 @@ table is empty.
   <message name="IDS_DEVTOOLS_36ade12d9ad04b9411343828de870437" desc="Warning message for icons from the manifest">
     Icon <ph name="ICONURL">$1s<ex>https://example.com/icon.png</ex></ph> does not specify its size in the manifest
   </message>
+  <message name="IDS_DEVTOOLS_36c6b76be5e3e5d310c5da0657880c54" desc="Label for a checkbox that toggles the inclusion of 3rd party cookies when clearing site data">
+    including third-party cookies
+  </message>
   <message name="IDS_DEVTOOLS_36e256f915286539621b57d8c80f0105" desc="Text in Context menu for expanding objects in IndexedDB tables">
     Expand Recursively
   </message>
@@ -238,6 +244,9 @@ table is empty.
   <message name="IDS_DEVTOOLS_673eb027e9c056f57140322807351dd5" desc="Text in Application Panel Sidebar of the Application panel">
     unique
   </message>
+  <message name="IDS_DEVTOOLS_6827a85b76e967f6a129e08f9272e76d" desc="Text in Application Panel Sidebar of the Application panel">
+    Local Storage
+  </message>
   <message name="IDS_DEVTOOLS_6b2bfcecfdc437d73d756be2f262945d" desc="Manifest installability error in the Application panel">
     The Play Store app URL and Play Store ID do not match
   </message>
@@ -264,6 +273,9 @@ table is empty.
   </message>
   <message name="IDS_DEVTOOLS_7091ed290cfa49f60364af4d4b3c42b9" desc="Section header in the Frame Details view">
     API availablity
+  </message>
+  <message name="IDS_DEVTOOLS_76869c244f39290f2a9685482351e1b5" desc="Title of an action that clears all site data including 3rd party cookies">
+    Clear site data (including third-party cookies)
   </message>
   <message name="IDS_DEVTOOLS_76c18f2b1e4155961e10434e3d83317f" desc="Text in Indexed DBViews of the Application panel">
     Key generator value: <ph name="STRING_METADATA_KEYGENERATORVALUE_">$1s<ex>2</ex></ph>
@@ -456,6 +468,9 @@ as used by <ph name="LOCKED_1">Chrome</ph>
   <message name="IDS_DEVTOOLS_b61822e8357dcaff77eaaccf348d9134" desc="Default name for worker">
     worker
   </message>
+  <message name="IDS_DEVTOOLS_b66b856833f34a841b51c7207dbc601f" desc="Text in Application Panel Sidebar of the Application panel">
+    IndexedDB
+  </message>
   <message name="IDS_DEVTOOLS_b704442a84076f1139cd70604553e8dc" desc="Tooltip text that appears when hovering over the largeicon clear button in the Indexed DBViews of the Application panel">
     Clear object store
   </message>
@@ -630,6 +645,9 @@ as used by <ph name="LOCKED_1">Chrome</ph>
   <message name="IDS_DEVTOOLS_ebfabf3434ab96d355274e76214e61ed" desc="Manifest installability error in the Application panel">
     Manifest does not contain a &apos;<ph name="LOCKED_1">name</ph>&apos; or &apos;<ph name="LOCKED_2">short_name</ph>&apos; field
   </message>
+  <message name="IDS_DEVTOOLS_ec1e074d56484165315c26a9baebaebd" desc="Text in Application Panel Sidebar of the Application panel">
+    Web SQL
+  </message>
   <message name="IDS_DEVTOOLS_ec3c33fb128aab90f46c922f8f7098f1" desc="Title of an action under the Background Services category that can be invoked through the Command Menu">
     Start recording events
   </message>
@@ -677,5 +695,8 @@ as used by <ph name="LOCKED_1">Chrome</ph>
   </message>
   <message name="IDS_DEVTOOLS_fe1c53e07b8cdf5e766595be09672b29" desc="Warning message for icons from the manifest">
     Icon <ph name="ICONURL">$1s<ex>https://example.com/icon.png</ex></ph> should specify its size as `{width}x{height}`
+  </message>
+  <message name="IDS_DEVTOOLS_ffd2f812cf202d121661e957feb8bbc9" desc="Label for checkbox to show url decoded cookie values">
+    Show URL decoded
   </message>
 </grit-part>

@@ -1,14 +1,6 @@
 {
   "extensions": [
     {
-      "type": "view",
-      "location": "panel",
-      "id": "elements",
-      "title": "Elements",
-      "order": 10,
-      "className": "Elements.ElementsPanel"
-    },
-    {
       "type": "@UI.ContextMenu.Provider",
       "contextTypes": [
         "SDK.RemoteObject",
@@ -245,6 +237,7 @@
       "type": "action",
       "actionId": "elements.capture-area-screenshot",
       "className": "Elements.InspectElementModeController.ToggleSearchActionDelegate",
+      "condition": "can_dock",
       "title": "Capture area screenshot",
       "category": "Screenshot"
     },
@@ -259,46 +252,6 @@
       "name": "elements-sidebar",
       "category": "Elements",
       "className": "Elements.ElementsPanel"
-    },
-    {
-      "type": "view",
-      "location": "elements-sidebar",
-      "id": "elements.eventListeners",
-      "title": "Event Listeners",
-      "order": 5,
-      "hasToolbar": true,
-      "persistence": "permanent",
-      "className": "Elements.EventListenersWidget"
-    },
-    {
-      "type": "view",
-      "location": "elements-sidebar",
-      "id": "elements.domProperties",
-      "title": "Properties",
-      "order": 7,
-      "persistence": "permanent",
-      "className": "Elements.PropertiesWidget"
-    },
-    {
-      "type": "view",
-      "experiment": "captureNodeCreationStacks",
-      "location": "elements-sidebar",
-      "id": "elements.domCreation",
-      "title": "Stack Trace",
-      "order": 10,
-      "persistence": "permanent",
-      "className": "Elements.NodeStackTraceWidget"
-    },
-    {
-      "type": "view",
-      "experiment": "cssGridFeatures",
-      "location": "elements-sidebar",
-      "id": "elements.layout",
-      "title": "Layout",
-      "order": 4,
-      "hasToolbar": false,
-      "persistence": "permanent",
-      "className": "Elements.LayoutSidebarPane"
     }
   ],
   "dependencies": [
@@ -309,9 +262,6 @@
     "event_listeners"
   ],
   "modules": [
-    "elements-legacy.js"
-  ],
-  "skip_compilation": [
     "elements-legacy.js"
   ],
   "resources": [

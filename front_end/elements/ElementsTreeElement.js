@@ -99,7 +99,7 @@ export class ElementsTreeElement extends UI.TreeOutline.TreeElement {
 
       if (node.isAdFrameNode()) {
         const adorner = this.adornText('Ad', AdornerCategories.Security);
-        adorner.title = ls`This frame was identified as an ad frame`;
+        UI.Tooltip.Tooltip.install(adorner, ls`This frame was identified as an ad frame`);
       }
     }
 
@@ -315,7 +315,8 @@ export class ElementsTreeElement extends UI.TreeOutline.TreeElement {
     if (this.listItemElement && !this._hintElement) {
       this._hintElement = this.listItemElement.createChild('span', 'selected-hint');
       const selectedElementCommand = '$0';
-      this._hintElement.title = ls`Use ${selectedElementCommand} in the console to refer to this element.`;
+      UI.Tooltip.Tooltip.install(
+          this._hintElement, ls`Use ${selectedElementCommand} in the console to refer to this element.`);
       UI.ARIAUtils.markAsHidden(this._hintElement);
     }
   }
@@ -663,6 +664,12 @@ export class ElementsTreeElement extends UI.TreeOutline.TreeElement {
           Common.UIString.UIString('Paste element'), treeOutline.pasteNode.bind(treeOutline, this._node),
           !treeOutline.canPaste(this._node));
       menuItem.setShortcut(createShortcut('V', modifier));
+
+      // Duplicate element, disabled on root element and ShadowDOM.
+      const isRootElement = !this._node.parentNode || this._node.parentNode.nodeName() === '#document';
+      menuItem = contextMenu.editSection().appendItem(
+          Common.UIString.UIString('Duplicate element'), treeOutline.duplicateNode.bind(treeOutline, this._node),
+          (this._node.isInShadowTree() || isRootElement));
     }
 
     menuItem = contextMenu.debugSection().appendCheckboxItem(
@@ -2166,9 +2173,6 @@ export class ElementsTreeElement extends UI.TreeOutline.TreeElement {
       ariaLabelActive: ls`Disable grid mode`,
     });
 
-    node.domModel().overlayModel().addEventListener(SDK.OverlayModel.Events.PersistentGridOverlayCleared, () => {
-      adorner.toggle(false /* force inactive state */);
-    });
     node.domModel().overlayModel().addEventListener(
         SDK.OverlayModel.Events.PersistentGridOverlayStateChanged, event => {
           const {nodeId: eventNodeId, enabled} = event.data;
@@ -2208,6 +2212,15 @@ export class ElementsTreeElement extends UI.TreeOutline.TreeElement {
       ariaLabelDefault: ls`Enable flex mode`,
       ariaLabelActive: ls`Disable flex mode`,
     });
+
+    node.domModel().overlayModel().addEventListener(
+        SDK.OverlayModel.Events.PersistentFlexContainerOverlayStateChanged, event => {
+          const {nodeId: eventNodeId, enabled} = event.data;
+          if (eventNodeId !== nodeId) {
+            return;
+          }
+          adorner.toggle(enabled);
+        });
 
     return adorner;
   }

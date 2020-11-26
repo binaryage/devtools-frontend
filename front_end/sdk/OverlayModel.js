@@ -4,10 +4,12 @@
 
 import * as Common from '../common/common.js';
 import * as Host from '../host/host.js';
+import * as Platform from '../platform/platform.js';
 import * as Root from '../root/root.js';
 
 import {DebuggerModel, Events as DebuggerModelEvents} from './DebuggerModel.js';
 import {DeferredDOMNode, DOMModel, DOMNode, Events as DOMModelEvents} from './DOMModel.js';  // eslint-disable-line no-unused-vars
+import {OverlayColorGenerator} from './OverlayColorGenerator.js';
 import {RemoteObject} from './RemoteObject.js';                             // eslint-disable-line no-unused-vars
 import {Capability, SDKModel, Target, TargetManager} from './SDKModel.js';  // eslint-disable-line no-unused-vars
 
@@ -363,7 +365,7 @@ export class OverlayModel extends SDKModel {
       return;
     }
     this._persistentFlexHighlighter.highlightInOverlay(nodeId);
-    this.dispatchEventToListeners(Events.PersistentFlexOverlayStateChanged, {nodeId, enabled: true});
+    this.dispatchEventToListeners(Events.PersistentFlexContainerOverlayStateChanged, {nodeId, enabled: true});
   }
 
   /**
@@ -494,6 +496,8 @@ export class OverlayModel extends SDKModel {
       showExtensionLines: showRulers,
       gridHighlightConfig: {},
       flexContainerHighlightConfig: {},
+      contrastAlgorithm: Root.Runtime.experiments.isEnabled('APCA') ? Protocol.Overlay.ContrastAlgorithm.Apca :
+                                                                      Protocol.Overlay.ContrastAlgorithm.Aa,
     };
 
     if (mode === 'all' || mode === 'content') {
@@ -594,6 +598,26 @@ export class OverlayModel extends SDKModel {
       };
     }
 
+    if (mode === 'justify-content' && this._flexFeaturesExperimentEnabled) {
+      highlightConfig.flexContainerHighlightConfig = {
+        containerBorder: {
+          color: Common.Color.PageHighlight.FlexContainerBorder.toProtocolRGBA(),
+          pattern: Protocol.Overlay.LineStylePattern.Dashed
+        },
+        mainDistributedSpace: {hatchColor: Common.Color.PageHighlight.FlexContainerBorder.toProtocolRGBA()}
+      };
+    }
+
+    if (mode === 'align-content' && this._flexFeaturesExperimentEnabled) {
+      highlightConfig.flexContainerHighlightConfig = {
+        containerBorder: {
+          color: Common.Color.PageHighlight.FlexContainerBorder.toProtocolRGBA(),
+          pattern: Protocol.Overlay.LineStylePattern.Dashed
+        },
+        crossDistributedSpace: {hatchColor: Common.Color.PageHighlight.FlexContainerBorder.toProtocolRGBA()}
+      };
+    }
+
     // the backend does not support the 'original' format because
     // it currently cannot retrieve the original format using computed styles
     const supportedColorFormats = new Set(['rgb', 'hsl', 'hex']);
@@ -666,9 +690,7 @@ export const Events = {
   ExitedInspectMode: Symbol('InspectModeExited'),
   HighlightNodeRequested: Symbol('HighlightNodeRequested'),
   ScreenshotRequested: Symbol('ScreenshotRequested'),
-  PersistentGridOverlayCleared: Symbol('PersistentGridOverlayCleared'),
   PersistentGridOverlayStateChanged: Symbol('PersistentGridOverlayStateChanged'),
-  PersistentFlexOverlayStateChanged: Symbol('PersistentFlexOverlayStateChanged'),
   PersistentFlexContainerOverlayStateChanged: Symbol('PersistentFlexContainerOverlayStateChanged'),
 };
 
@@ -753,11 +775,12 @@ class DefaultHighlighter {
 
 /**
  * @interface
+ * @template ConfigType
  */
-export class PersistentGridHighlighter {
+export class PersistentHighlighter {
   /**
    * @param {number} nodeId
-   * @param {!Protocol.Overlay.GridHighlightConfig} config
+   * @param {!ConfigType} config
    */
   highlightInOverlay(nodeId, config) {
   }
@@ -784,7 +807,7 @@ export class PersistentGridHighlighter {
 }
 
 /**
- * @implements {PersistentGridHighlighter}
+ * @implements {PersistentHighlighter<!Protocol.Overlay.GridHighlightConfig>}
  */
 class DefaultPersistentGridHighlighter {
   /**
@@ -818,8 +841,8 @@ class DefaultPersistentGridHighlighter {
 
     // Debounce recording highlighted grids in order to avoid counting rapidly turning grids on and off.
     this._recordHighlightedGridCount = Common.Debouncer.debounce(this._doRecordHighlightedGridCount.bind(this), 1000);
-    /** @type {!Array<number>} */
-    this._previouslyRecordedGridCountNodeIds = [];
+    /** @type {!Set<number>} */
+    this._previouslyRecordedGridCountNodeIds = new Set();
   }
 
   /**
@@ -862,14 +885,14 @@ class DefaultPersistentGridHighlighter {
   }
 
   _doRecordHighlightedGridCount() {
-    const recordedNodeIds = [...this._gridHighlights.keys()];
+    const recordedNodeIds = new Set(this._gridHighlights.keys());
 
     // If only settings changed, but not the list of highlighted grids, bail out.
-    if (arraysEqual(recordedNodeIds, this._previouslyRecordedGridCountNodeIds)) {
+    if (Platform.SetUtilities.isEqual(recordedNodeIds, this._previouslyRecordedGridCountNodeIds)) {
       return;
     }
 
-    Host.userMetrics.highlightedPersistentCssGridCount(recordedNodeIds.length);
+    Host.userMetrics.highlightedPersistentCssGridCount(recordedNodeIds.size);
 
     this._previouslyRecordedGridCountNodeIds = recordedNodeIds;
   }
@@ -1008,39 +1031,7 @@ class DefaultPersistentGridHighlighter {
 DefaultPersistentGridHighlighter.gridTelemetryLogged = false;
 
 /**
- * @interface
- */
-export class PersistentFlexHighlighter {
-  /**
-   * @param {number} nodeId
-   * @param {!Protocol.Overlay.FlexContainerHighlightConfig} config
-   */
-  highlightInOverlay(nodeId, config) {
-  }
-
-  /**
-   * @param {number} nodeId
-   */
-  hideInOverlay(nodeId) {
-  }
-
-  hideAllInOverlay() {
-  }
-
-  refreshHighlights() {
-  }
-
-  /**
-   * @param {number} nodeId
-   * @return {boolean}
-   */
-  isHighlighted(nodeId) {
-    return false;
-  }
-}
-
-/**
- * @implements {PersistentFlexHighlighter}
+ * @implements {PersistentHighlighter<!Protocol.Overlay.FlexContainerHighlightConfig>}
  */
 class DefaultPersistentFlexHighlighter {
   /**
@@ -1075,7 +1066,9 @@ class DefaultPersistentFlexHighlighter {
       lineSeparator: {
         color: Common.Color.PageHighlight.FlexContainerBorder.toProtocolRGBA(),
         pattern: Protocol.Overlay.LineStylePattern.Dashed
-      }
+      },
+      mainDistributedSpace: {hatchColor: Common.Color.PageHighlight.FlexContainerBorder.toProtocolRGBA()},
+      crossDistributedSpace: {hatchColor: Common.Color.PageHighlight.FlexContainerBorder.toProtocolRGBA()}
     };
   }
 
@@ -1151,52 +1144,6 @@ class DefaultPersistentFlexHighlighter {
   }
 }
 
-/**
- * Used to cycle through a list of predetermined colors for the grid overlay.
- * This helps users differentiate between overlays when several are shown at the
- * same time.
- */
-class OverlayColorGenerator {
-  constructor() {
-    this._colors = [
-      // F59794
-      new Common.Color.Color([0.9607843137254902, 0.592156862745098, 0.5803921568627451, 1], Common.Color.Format.RGBA),
-      // F0BF4C
-      new Common.Color.Color([0.9411764705882353, 0.7490196078431373, 0.2980392156862745, 1], Common.Color.Format.RGBA),
-      // D4ED31
-      new Common.Color.Color(
-          [0.8313725490196079, 0.9294117647058824, 0.19215686274509805, 1], Common.Color.Format.RGBA),
-      // 9EEB47
-      new Common.Color.Color([0.6196078431372549, 0.9215686274509803, 0.2784313725490196, 1], Common.Color.Format.RGBA),
-      // 5BD1D7
-      new Common.Color.Color([0.3568627450980392, 0.8196078431372549, 0.8431372549019608, 1], Common.Color.Format.RGBA),
-      // BCCEFB
-      new Common.Color.Color([0.7372549019607844, 0.807843137254902, 0.984313725490196, 1], Common.Color.Format.RGBA),
-      // C6BEEE
-      new Common.Color.Color([0.7764705882352941, 0.7450980392156863, 0.9333333333333333, 1], Common.Color.Format.RGBA),
-      // D094EA
-      new Common.Color.Color([0.8156862745098039, 0.5803921568627451, 0.9176470588235294, 1], Common.Color.Format.RGBA),
-      // EB94CF
-      new Common.Color.Color([0.9215686274509803, 0.5803921568627451, 0.8117647058823529, 1], Common.Color.Format.RGBA),
-    ];
-    this._index = 0;
-  }
-
-  /**
-   * Generate the next color in the spectrum
-   * @return {!Common.Color.Color}
-   */
-  next() {
-    const color = this._colors[this._index];
-    this._index++;
-    if (this._index >= this._colors.length) {
-      this._index = 0;
-    }
-
-    return color;
-  }
-}
-
 export class SourceOrderHighlighter {
   /**
    * @param {!OverlayModel} model
@@ -1227,25 +1174,3 @@ SDKModel.register(OverlayModel, Capability.DOM, true);
 /** @typedef {!{node: !DOMNode, selectorList: (string|undefined)} | !{deferredNode: DeferredDOMNode, selectorList: (string|undefined)} | !{object: !RemoteObject, selectorList: (string|undefined)} | !{clear: *}} */
 // @ts-ignore typedef
 export let HighlightData;
-
-/**
- * Checks if 2 arrays are equal.
- * @param {!Array<*>} a1 The first array
- * @param {!Array<*>} a2 The second array
- * @return {boolean}
- */
-const arraysEqual = (a1, a2) => {
-  if (a1.length !== a2.length) {
-    return false;
-  }
-
-  a1 = [...a1].sort();
-  a2 = [...a2].sort();
-  for (let i = 0; i < a1.length; i++) {
-    if (a1[i] !== a2[i]) {
-      return false;
-    }
-  }
-
-  return true;
-};

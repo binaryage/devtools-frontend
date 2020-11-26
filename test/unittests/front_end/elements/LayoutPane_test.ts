@@ -161,6 +161,57 @@ describeWithEnvironment('LayoutPane', async () => {
     assert.strictEqual(queryLabels(component, '[data-element]').length, 3);
   });
 
+  it('renders flex elements', async () => {
+    const component = new Elements.LayoutPane.LayoutPane();
+    renderElementIntoDOM(component);
+
+    component.data = {
+      gridElements: [],
+      flexContainerElements: [
+        {
+          id: 1,
+          color: 'red',
+          name: 'div',
+          domId: 'elementId',
+          enabled: false,
+          reveal: () => {},
+          toggle: () => {},
+          setColor: () => {},
+          highlight: () => {},
+          hideHighlight: () => {},
+        },
+        {
+          id: 2,
+          color: 'blue',
+          name: 'span',
+          domClasses: ['class1', 'class2'],
+          enabled: false,
+          reveal: () => {},
+          toggle: () => {},
+          setColor: () => {},
+          highlight: () => {},
+          hideHighlight: () => {},
+        },
+        {
+          id: 3,
+          color: 'green',
+          name: 'div',
+          enabled: false,
+          reveal: () => {},
+          toggle: () => {},
+          setColor: () => {},
+          highlight: () => {},
+          hideHighlight: () => {},
+        },
+      ],
+      settings: [],
+    };
+
+    assertShadowRoot(component.shadowRoot);
+
+    assert.strictEqual(queryLabels(component, '[data-element]').length, 3);
+  });
+
   it('send an event when an element overlay is toggled', async () => {
     const component = new Elements.LayoutPane.LayoutPane();
     renderElementIntoDOM(component);
@@ -221,5 +272,24 @@ describeWithEnvironment('LayoutPane', async () => {
     assertElement(button, HTMLButtonElement);
     button.click();
     assert.strictEqual(called, 1);
+  });
+
+  it('expands/collapses <details> using ArrowLeft/ArrowRight keys', async () => {
+    const component = new Elements.LayoutPane.LayoutPane();
+    component.data = {
+      gridElements: [],
+      settings: [],
+    };
+    renderElementIntoDOM(component);
+    assertShadowRoot(component.shadowRoot);
+    const details = component.shadowRoot.querySelector('details');
+    assertElement(details, HTMLDetailsElement);
+    const summary = details.querySelector('summary');
+    assertElement(summary, HTMLElement);
+    assert(details.open, 'The first details were not expanded by default');
+    summary.dispatchEvent(new KeyboardEvent('keydown', {bubbles: true, cancelable: true, key: 'ArrowLeft'}));
+    assert(!details.open, 'The details were not collapsed after sending ArrowLeft');
+    summary.dispatchEvent(new KeyboardEvent('keydown', {bubbles: true, cancelable: true, key: 'ArrowRight'}));
+    assert(details.open, 'The details were not expanded after sending ArrowRight');
   });
 });

@@ -1,11 +1,9 @@
 {
   "dependencies": [
-    "components"
+    "components",
+    "i18n"
   ],
   "modules": [
-    "search-legacy.js"
-  ],
-  "skip_compilation": [
     "search-legacy.js"
   ],
   "resources": [

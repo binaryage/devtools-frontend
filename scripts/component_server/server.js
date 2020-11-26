@@ -66,14 +66,22 @@ function createServerIndexFile(componentNames) {
       <meta name="viewport" content="width=device-width" />
       <title>DevTools components</title>
       <style>
-        a { text-transform: capitalize; }
+        a:link, a:visited {
+          color: blue;
+          text-transform: capitalize;
+          text-decoration: none;
+        }
+        a:hover {
+          text-decoration: underline;
+        }
       </style>
     </head>
     <body>
       <h1>DevTools components</h1>
       <ul>
         ${componentNames.map(name => {
-          return `<li><a href='/${name}'>${name}</a></li>`;
+          const niceName = name.replace(/_/g, ' ');
+          return `<li><a href='/${name}'>${niceName}</a></li>`;
         }).join('\n')}
       </ul>
     </body>
@@ -141,12 +149,30 @@ async function requestHandler(request, response) {
 
   if (filePath === '/' || filePath === '/index.html') {
     const components = await fs.promises.readdir(path.join(devtoolsFrontendFolder, 'component_docs'));
-    const html = createServerIndexFile(components);
+    const html = createServerIndexFile(components.filter(filePath => {
+      const stats = fs.lstatSync(path.join(devtoolsFrontendFolder, 'component_docs', filePath));
+      // Filter out some build config files (tsconfig, d.ts, etc), and just list the directories.
+      return stats.isDirectory();
+    }));
     respondWithHtml(response, html);
   } else if (path.extname(filePath) === '') {
     // This means it's a component path like /breadcrumbs.
     const componentHtml = await getExamplesForPath(filePath);
     respondWithHtml(response, componentHtml);
+    return;
+  } else if (/component_docs\/(.+)\/(.+)\.html/.test(filePath)) {
+    /** This conditional checks if we are viewing an individual example's HTML
+     *  file. e.g. localhost:8090/component_docs/data_grid/basic.html For each
+     *  example we inject themeColors.css into the page so all CSS variables
+     *  that components use are available.
+     */
+    const fileContents = await fs.promises.readFile(path.join(devtoolsFrontendFolder, filePath), {encoding: 'utf8'});
+    const themeColoursLink = '<link rel="stylesheet" href="/ui/themeColors.css" type="text/css" />';
+    const toggleDarkModeScript = '<script type="module" src="/component_docs/component_docs.js"></script>';
+    const newFileContents = fileContents.replace('<style>', themeColoursLink + '\n<style>')
+                                .replace('<script', toggleDarkModeScript + '\n<script');
+    respondWithHtml(response, newFileContents);
+
   } else {
     // This means it's an asset like a JS file or an image.
     const normalizedPath = normalizeImagePathIfRequired(filePath);

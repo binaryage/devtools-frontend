@@ -4,12 +4,7 @@
     "sdk"
   ],
   "modules": [
-    "color_picker.js",
-    "color_picker-legacy.js",
-    "ContrastInfo.js",
-    "ContrastOverlay.js",
-    "ContrastDetails.js",
-    "Spectrum.js"
+    "color_picker-legacy.js"
   ],
   "resources": [
     "spectrum.css"

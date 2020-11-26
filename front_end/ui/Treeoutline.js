@@ -36,6 +36,7 @@ import * as ARIAUtils from './ARIAUtils.js';
 import {Icon} from './Icon.js';                            // eslint-disable-line no-unused-vars
 import {Config, InplaceEditor} from './InplaceEditor.js';  // eslint-disable-line no-unused-vars
 import {Keys} from './KeyboardShortcut.js';
+import {Tooltip} from './Tooltip.js';
 import {deepElementFromPoint, enclosingNodeOrSelfWithNodeNameInArray, isEditing} from './UIUtils.js';
 import {appendStyle} from './utils/append-style.js';
 import {createShadowRootWithCoreStyles} from './utils/create-shadow-root-with-core-styles.js';
@@ -403,6 +404,12 @@ export class TreeOutline extends Common.ObjectWrapper.ObjectWrapper {
     this._treeElementToScrollIntoView = treeElement;
     this._centerUponScrollIntoView = center;
   }
+
+  /**
+   * @param {!TreeElement} treeElement
+   */
+  onStartedEditingTitle(treeElement) {
+  }
 }
 
 /** @enum {symbol} */
@@ -430,7 +437,7 @@ export class TreeOutlineInShadow extends TreeOutline {
 
   /**
    * @param {string} cssFile
-  * @param {!{enableLegacyPatching:boolean}} options
+   * @param {!{enableLegacyPatching:boolean}} options
    */
   registerRequiredCSS(cssFile, options) {
     appendStyle(this._shadowRoot, cssFile, options);
@@ -442,6 +449,17 @@ export class TreeOutlineInShadow extends TreeOutline {
 
   makeDense() {
     this.contentElement.classList.add('tree-outline-dense');
+  }
+
+  /**
+   * @param {!TreeElement} treeElement
+   * @override
+   */
+  onStartedEditingTitle(treeElement) {
+    const selection = this._shadowRoot.getSelection();
+    if (selection) {
+      selection.selectAllChildren(treeElement.titleElement);
+    }
   }
 }
 
@@ -759,20 +777,21 @@ export class TreeElement {
       this.select(true);
     }
 
-    for (let i = 0; this._children && i < this._children.length; ++i) {
-      const child = this._children[i];
-      child.previousSibling = null;
-      child.nextSibling = null;
-      child.parent = null;
+    if (this._children) {
+      for (const child of this._children) {
+        child.previousSibling = null;
+        child.nextSibling = null;
+        child.parent = null;
 
-      if (this.treeOutline) {
-        this.treeOutline._unbindTreeElement(child);
+        if (this.treeOutline) {
+          this.treeOutline._unbindTreeElement(child);
+        }
+        for (let current = child.firstChild(); this.treeOutline && current;
+             current = current.traverseNextTreeElement(false, child, true)) {
+          this.treeOutline._unbindTreeElement(current);
+        }
+        child._detach();
       }
-      for (let current = child.firstChild(); this.treeOutline && current;
-           current = current.traverseNextTreeElement(false, child, true)) {
-        this.treeOutline._unbindTreeElement(current);
-      }
-      child._detach();
     }
     this._children = [];
     if (this.treeOutline) {
@@ -852,11 +871,8 @@ export class TreeElement {
    */
   startEditingTitle(editingConfig) {
     InplaceEditor.startEditing(/** @type {!Element} */ (this.titleElement), editingConfig);
-    if (this.treeOutline instanceof TreeOutlineInShadow) {
-      const selection = this.treeOutline._shadowRoot.getSelection();
-      if (selection) {
-        selection.selectAllChildren(this.titleElement);
-      }
+    if (this.treeOutline) {
+      this.treeOutline.onStartedEditingTitle(this);
     }
   }
 
@@ -916,7 +932,7 @@ export class TreeElement {
       return;
     }
     this._tooltip = x;
-    this._listItemNode.title = x;
+    Tooltip.install(this._listItemNode, x);
   }
 
   /**

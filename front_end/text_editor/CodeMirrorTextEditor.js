@@ -27,9 +27,6 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-// @ts-nocheck
-// TODO(crbug.com/1011811): Enable TypeScript compiler checks
-
 import * as Common from '../common/common.js';
 import * as Host from '../host/host.js';
 import * as i18n from '../i18n/i18n.js';
@@ -54,7 +51,7 @@ const i18nString = i18n.i18n.getLocalizedString.bind(undefined, str_);
  * @typedef {{
 *   startColumn: number,
 *   endColumn: number,
-*   type: string
+*   type: string,
 * }}
 */
 // @ts-ignore typedef
@@ -65,6 +62,10 @@ export let Token;
   */
 // @ts-ignore typedef
 export let Coordinates;
+
+// https://crbug.com/1151919 * = CodeMirror.Editor
+/** @type {!WeakMap<*, !CodeMirrorTextEditor>} */
+const editorToDevtoolsWrapper = new WeakMap();
 
 /**
  * @implements {UI.TextEditor.TextEditor}
@@ -84,31 +85,37 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
     const {indentWithTabs, indentUnit} = CodeMirrorTextEditor._getIndentation(
         Common.Settings.Settings.instance().moduleSetting('textEditorIndent').get());
 
-    this._codeMirror = new CodeMirror(this.element, {
-      screenReaderLabel: options.devtoolsAccessibleName || i18nString(UIStrings.codeEditor),
-      lineNumbers: options.lineNumbers,
-      matchBrackets: true,
-      smartIndent: true,
-      styleSelectedText: true,
-      electricChars: true,
-      styleActiveLine: true,
-      indentUnit,
-      indentWithTabs,
-      lineWrapping: options.lineWrapping,
-      lineWiseCopyCut: options.lineWiseCopyCut || false,
-      tabIndex: 0,
-      pollInterval: Math.pow(2, 31) - 1,  // ~25 days
-      inputStyle: options.inputStyle || 'devToolsAccessibleTextArea'
-    });
-    this._codeMirrorElement = this.element.lastElementChild;
+    // https://crbug.com/1151919 * = CodeMirror.Editor
+    /** @type {*} */
+    // @ts-ignore https://crbug.com/1151919 CodeMirror types are incorrect
+    this._codeMirror = /** @type {!CodeMirror.Editor} */ (
+        // @ts-ignore https://crbug.com/1151919 CodeMirror types are incorrect
+        new CodeMirror(this.element, /** @type {!CodeMirror.EditorConfiguration} */ ({
+                         screenReaderLabel: options.devtoolsAccessibleName || i18nString(UIStrings.codeEditor),
+                         lineNumbers: options.lineNumbers,
+                         smartIndent: true,
+                         electricChars: true,
+                         indentUnit,
+                         indentWithTabs,
+                         lineWrapping: options.lineWrapping,
+                         lineWiseCopyCut: options.lineWiseCopyCut || false,
+                         pollInterval: Math.pow(2, 31) - 1,  // ~25 days
+                         inputStyle: options.inputStyle || 'devToolsAccessibleTextArea',
+                         matchBrackets: true,
+                         styleSelectedText: true,
+                         styleActiveLine: true,
+                         tabIndex: 0,
+                       })));
+    this._codeMirrorElement = /** @type {!HTMLElement} */ (this.element.lastElementChild);
 
-    this._codeMirror._codeMirrorTextEditor = this;
+    editorToDevtoolsWrapper.set(this._codeMirror, this);
 
     Common.Settings.Settings.instance()
         .moduleSetting('textEditorIndent')
         .addChangeListener(this._updateIndentSize.bind(this));
 
-    CodeMirror.keyMap['devtools-common'] = {
+    // @ts-ignore https://crbug.com/1151919 CodeMirror types are incorrect
+    CodeMirror.keyMap['devtools-common'] = /** @type {!CodeMirror.KeyMap} */ ({
       'Left': 'goCharLeft',
       'Right': 'goCharRight',
       'Up': 'goLineUp',
@@ -125,9 +132,10 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
       'Ctrl-Space': 'autocomplete',
       'Esc': 'dismiss',
       'Ctrl-M': 'gotoMatchingBracket'
-    };
+    });
 
-    CodeMirror.keyMap['devtools-pc'] = {
+    // @ts-ignore https://crbug.com/1151919 CodeMirror types are incorrect
+    CodeMirror.keyMap['devtools-pc'] = /** @type {!CodeMirror.KeyMap} */ ({
       'Ctrl-A': 'selectAll',
       'Ctrl-Z': 'undoAndReveal',
       'Shift-Ctrl-Z': 'redoAndReveal',
@@ -148,9 +156,10 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
       'Ctrl-D': 'selectNextOccurrence',
       'Ctrl-U': 'undoLastSelection',
       fallthrough: 'devtools-common'
-    };
+    });
 
-    CodeMirror.keyMap['devtools-mac'] = {
+    // @ts-ignore https://crbug.com/1151919 CodeMirror types are incorrect
+    CodeMirror.keyMap['devtools-mac'] = /** @type {!CodeMirror.KeyMap} */ ({
       'Cmd-A': 'selectAll',
       'Cmd-Z': 'undoAndReveal',
       'Shift-Cmd-Z': 'redoAndReveal',
@@ -183,7 +192,7 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
       'Cmd-D': 'selectNextOccurrence',
       'Cmd-U': 'undoLastSelection',
       fallthrough: 'devtools-common'
-    };
+    });
 
     if (options.bracketMatchingSetting) {
       options.bracketMatchingSetting.addChangeListener(this._enableBracketMatchingIfNeeded, this);
@@ -200,16 +209,26 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
     }
     this._codeMirror.setOption('maxHighlightLength', maxHighlightLength);
     this._codeMirror.setOption('mode', null);
+    // @ts-ignore https://crbug.com/1151919 CodeMirror types are incorrect
     this._codeMirror.setOption('crudeMeasuringFrom', 1000);
 
     this._shouldClearHistory = true;
     this._lineSeparator = '\n';
 
+    /** @type {boolean} */
+    this._hasOneLine;
+
+    // https://crbug.com/1151919 * = CodeMirror.TextMarker
+    /** @type {!WeakMap<*, !TextEditorBookMark>} */
+    this._bookmarkForMarker = new WeakMap();
+
     CodeMirrorTextEditor._fixWordMovement(this._codeMirror);
 
     this._selectNextOccurrenceController = new SelectNextOccurrenceController(this, this._codeMirror);
 
+    // @ts-ignore https://crbug.com/1151919 CodeMirror types are incorrect
     this._codeMirror.on('changes', this._changes.bind(this));
+    // @ts-ignore https://crbug.com/1151919 CodeMirror types are incorrect
     this._codeMirror.on('beforeSelectionChange', this._beforeSelectionChange.bind(this));
     this._codeMirror.on('cursorActivity', () => {
       this.dispatchEventToListeners(UI.TextEditor.Events.CursorChanged);
@@ -239,7 +258,7 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
 
     this._placeholderElement = null;
     if (options.placeholder) {
-      this._placeholderElement = createElement('pre');
+      this._placeholderElement = document.createElement('pre');
       this._placeholderElement.classList.add('placeholder-text');
       this._placeholderElement.classList.add('CodeMirror-line-like');
       this._placeholderElement.textContent = options.placeholder;
@@ -247,44 +266,62 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
     }
   }
 
+  // https://crbug.com/1151919 * = CodeMirror.Editor
   /**
-   * @param {!CodeMirror} codeMirror
+   * @param {*} codeMirrorEditor
+   * @return {!CodeMirrorTextEditor}
+   */
+  static getForCodeMirror(codeMirrorEditor) {
+    const wrapper = editorToDevtoolsWrapper.get(codeMirrorEditor);
+    if (!wrapper) {
+      throw new Error('CodeMirrorTextEditor not found');
+    }
+    return wrapper;
+  }
+
+  // https://crbug.com/1151919 * = CodeMirror.Editor
+  /**
+   * @param {*} codeMirror
    */
   static autocompleteCommand(codeMirror) {
-    const autocompleteController = codeMirror._codeMirrorTextEditor._autocompleteController;
+    const autocompleteController = CodeMirrorTextEditor.getForCodeMirror(codeMirror)._autocompleteController;
     if (autocompleteController) {
       autocompleteController.autocomplete(true);
     }
   }
 
+  // https://crbug.com/1151919 * = CodeMirror.Editor
   /**
-   * @param {!CodeMirror} codeMirror
+   * @param {*} codeMirror
    */
   static undoLastSelectionCommand(codeMirror) {
-    codeMirror._codeMirrorTextEditor._selectNextOccurrenceController.undoLastSelection();
+    CodeMirrorTextEditor.getForCodeMirror(codeMirror)._selectNextOccurrenceController.undoLastSelection();
   }
 
+  // https://crbug.com/1151919 * = CodeMirror.Editor
   /**
-   * @param {!CodeMirror} codeMirror
+   * @param {*} codeMirror
    */
   static selectNextOccurrenceCommand(codeMirror) {
-    codeMirror._codeMirrorTextEditor._selectNextOccurrenceController.selectNextOccurrence();
+    CodeMirrorTextEditor.getForCodeMirror(codeMirror)._selectNextOccurrenceController.selectNextOccurrence();
   }
 
+  // https://crbug.com/1151919 * = CodeMirror.Editor
   /**
    * @param {boolean} shift
-   * @param {!CodeMirror} codeMirror
+   * @param {*} codeMirror
    */
   static moveCamelLeftCommand(shift, codeMirror) {
-    codeMirror._codeMirrorTextEditor._doCamelCaseMovement(-1, shift);
+    CodeMirrorTextEditor.getForCodeMirror(codeMirror)._doCamelCaseMovement(-1, shift);
   }
 
+  // https://crbug.com/1151919 * = CodeMirror.Editor
   /**
    * @param {boolean} shift
-   * @param {!CodeMirror} codeMirror
+   * @param {*} codeMirror
    */
   static moveCamelRightCommand(shift, codeMirror) {
-    codeMirror._codeMirrorTextEditor._doCamelCaseMovement(1, shift);
+    CodeMirrorTextEditor.getForCodeMirror(codeMirror)._doCamelCaseMovement(1, shift);
   }
 
   /**
@@ -309,7 +346,13 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
     CodeMirror.defineMode(oldModeName, CodeMirror.modes[modeName]);
     CodeMirror.defineMode(modeName, modeConstructor);
 
+    /**
+     *
+     * @param {*} config
+     * @param {*} parserConfig
+     */
     function modeConstructor(config, parserConfig) {
+      /** @type {*} */
       const innerConfig = {};
       for (const i in parserConfig) {
         innerConfig[i] = parserConfig[i];
@@ -317,10 +360,32 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
       innerConfig.name = oldModeName;
       const codeMirrorMode = CodeMirror.getMode(config, innerConfig);
       codeMirrorMode.name = modeName;
-      codeMirrorMode.token = tokenOverride.bind(null, codeMirrorMode.token);
+      if (typeof codeMirrorMode.token === 'undefined') {
+        throw new Error('codeMirrorMode.token was unexpectedly undefined');
+      }
+      codeMirrorMode.token = getTokenFunction(codeMirrorMode.token);
       return codeMirrorMode;
     }
 
+    /**
+     * @param {function(*,*):string|null} superToken
+     */
+    function getTokenFunction(superToken) {
+      /**
+      * @param {*} stream
+      * @param {*} state
+      */
+      function childFunc(stream, state) {
+        return tokenOverride(superToken, stream, state);
+      }
+
+      return childFunc;
+    }
+    /**
+     * @param {function(*, *):string|null} superToken
+     * @param {*} stream
+     * @param {*} state
+     */
     function tokenOverride(superToken, stream, state) {
       const token = superToken(stream, state);
       return token ? tokenPrefix + token.split(/ +/).join(' ' + tokenPrefix) : token;
@@ -343,7 +408,8 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
     const modesToLoad = new Set();
     for (const extension of extensions) {
       const descriptor = extension.descriptor();
-      if (installed.has(extension) || descriptor['mimeTypes'].indexOf(mimeType) === -1) {
+      const mimeTypes = descriptor.mimeTypes;
+      if (installed.has(extension) || mimeTypes && mimeTypes.indexOf(mimeType) === -1) {
         continue;
       }
 
@@ -361,7 +427,7 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
 
   /**
    * @param {!Array<!Root.Runtime.Extension>} extensions
-   * @return {!Promise}
+   * @return {!Promise<!Array<void>>}
    */
   static _installMimeTypeModes(extensions) {
     const promises = extensions.map(extension => extension.instance().then(installMode.bind(null, extension)));
@@ -381,10 +447,16 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
     }
   }
 
+  // https://crbug.com/1151919 * = CodeMirror.Editor
   /**
-   * @param {!CodeMirror} codeMirror
+   * @param {*} codeMirror
    */
   static _fixWordMovement(codeMirror) {
+    // https://crbug.com/1151919 * = CodeMirror.Editor
+    /**
+     * @param {boolean} shift
+     * @param {*} codeMirror
+     */
     function moveLeft(shift, codeMirror) {
       codeMirror.setExtending(shift);
       const cursor = codeMirror.getCursor('head');
@@ -402,6 +474,11 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
       codeMirror.setExtending(false);
     }
 
+    // https://crbug.com/1151919 * = CodeMirror.Editor
+    /**
+     * @param {boolean} shift
+     * @param {*} codeMirror
+     */
     function moveRight(shift, codeMirror) {
       codeMirror.setExtending(shift);
       const cursor = codeMirror.getCursor('head');
@@ -422,6 +499,7 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
     const modifierKey = Host.Platform.isMac() ? 'Alt' : 'Ctrl';
     const leftKey = modifierKey + '-Left';
     const rightKey = modifierKey + '-Right';
+    /** @type {*} */
     const keyMap = {};
     keyMap[leftKey] = moveLeft.bind(null, false);
     keyMap[rightKey] = moveRight.bind(null, false);
@@ -430,11 +508,13 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
     codeMirror.addKeyMap(keyMap);
   }
 
+  // https://crbug.com/1151919 * = CodeMirror.Editor
   /**
-   * @return {!CodeMirror.Editor}
+   * @return {*}
    */
   codeMirror() {
-    return /** @type {!CodeMirror.Editor} */ (this._codeMirror);
+    // https://crbug.com/1151919 * = CodeMirror.Editor
+    return /** @type {*} */ (this._codeMirror);
   }
 
   /**
@@ -451,7 +531,7 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
    */
   setPlaceholder(placeholder) {
     if (!this._placeholderElement) {
-      this._placeholderElement = createElement('pre');
+      this._placeholderElement = document.createElement('pre');
       this._placeholderElement.classList.add('placeholder-text');
       this._placeholderElement.classList.add('CodeMirror-line-like');
     }
@@ -606,9 +686,10 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
 
   _enableBracketMatchingIfNeeded() {
     this._codeMirror.setOption(
-        'autoCloseBrackets', (this._options.bracketMatchingSetting && this._options.bracketMatchingSetting.get()) ?
-            {explode: false} :
-            false);
+        // @ts-ignore https://crbug.com/1151919 CodeMirror types are incorrect
+        'autoCloseBrackets',
+        (this._options.bracketMatchingSetting && this._options.bracketMatchingSetting.get()) ? {explode: false} :
+                                                                                               false);
   }
 
   /**
@@ -651,12 +732,14 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
    * @param {!Event} e
    */
   _handleKeyDown(e) {
-    if (e.key === 'Tab' && Common.Settings.Settings.instance().moduleSetting('textEditorTabMovesFocus').get()) {
-      e.consume(false);
+    const keyboardEvent = /** @type {!KeyboardEvent} */ (e);
+    if (keyboardEvent.key === 'Tab' &&
+        Common.Settings.Settings.instance().moduleSetting('textEditorTabMovesFocus').get()) {
+      keyboardEvent.consume(false);
       return;
     }
-    if (this._autocompleteController && this._autocompleteController.keyDown(e)) {
-      e.consume(true);
+    if (this._autocompleteController && this._autocompleteController.keyDown(keyboardEvent)) {
+      keyboardEvent.consume(true);
     }
   }
 
@@ -742,7 +825,7 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
     if (!token) {
       return null;
     }
-    return {startColumn: token.start, endColumn: token.end, type: token.type};
+    return {startColumn: token.start, endColumn: token.end, type: /** @type {string} */ (token.type)};
   }
 
   /**
@@ -764,6 +847,10 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
    * @return {boolean}
    */
   _hasLongLines() {
+    /**
+     *
+     * @param {!{text:string}} lineHandle
+     */
     function lineIterator(lineHandle) {
       if (lineHandle.text.length > CodeMirrorTextEditor.LongLineModeLineLengthThreshold) {
         hasLongLines = true;
@@ -776,10 +863,12 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
   }
 
   _enableLongLinesMode() {
+    // @ts-ignore https://crbug.com/1151919 CodeMirror types are incorrect
     this._codeMirror.setOption('styleSelectedText', false);
   }
 
   _disableLongLinesMode() {
+    // @ts-ignore https://crbug.com/1151919 CodeMirror types are incorrect
     this._codeMirror.setOption('styleSelectedText', true);
   }
 
@@ -812,7 +901,8 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
      */
     function setMode() {
       const rewrittenMimeType = this.rewriteMimeType(mimeType);
-      if (this._codeMirror.options.mode !== rewrittenMimeType) {
+      const modeOption = this._codeMirror.getOption('mode');
+      if (modeOption !== rewrittenMimeType) {
         this._codeMirror.setOption('mode', rewrittenMimeType);
       }
     }
@@ -872,25 +962,31 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
 
   /**
    * @override
-   * @param {function(!KeyboardEvent)} handler
+   * @param {function(!KeyboardEvent):void} handler
    */
   addKeyDownHandler(handler) {
-    this._codeMirror.on('keydown', (CodeMirror, event) => handler(event));
+    this._codeMirror.on(
+        'keydown', /**
+    * @param {*} CodeMirror
+    * @param {!KeyboardEvent} event
+    */
+        (CodeMirror, event) => handler(event));
   }
 
   /**
    * @param {number} lineNumber
    * @param {number} columnNumber
-   * @param {!Element} element
+   * @param {!HTMLElement} element
    * @param {symbol} type
    * @param {boolean=} insertBefore
    * @return {!TextEditorBookMark}
    */
   addBookmark(lineNumber, columnNumber, element, type, insertBefore) {
-    const bookmark = new TextEditorBookMark(
-        this._codeMirror.setBookmark(
-            new CodeMirror.Pos(lineNumber, columnNumber), {widget: element, insertLeft: insertBefore}),
-        type, this);
+    const marker = this._codeMirror.setBookmark(
+        new CodeMirror.Pos(lineNumber, columnNumber), {widget: element, insertLeft: insertBefore});
+
+    const bookmark = new TextEditorBookMark(marker, type, this);
+    this._bookmarkForMarker.set(marker, bookmark);
     this._updateDecorations(lineNumber);
     return bookmark;
   }
@@ -908,9 +1004,11 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
       const endMarkers = this._codeMirror.findMarksAt(pos.end);
       markers = markers.concat(middleMarkers, endMarkers);
     }
+    /** @type {!Array<!TextEditorBookMark>} */
     const bookmarks = [];
     for (let i = 0; i < markers.length; i++) {
-      const bookmark = markers[i][TextEditorBookMark._symbol];
+      const marker = markers[i];
+      const bookmark = this._bookmarkForMarker.get(marker);
       if (bookmark && (!type || bookmark.type() === type)) {
         bookmarks.push(bookmark);
       }
@@ -934,7 +1032,7 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
   }
 
   /**
-   * @param {function()} operation
+   * @param {function():*} operation
    */
   operation(operation) {
     this._codeMirror.operation(operation);
@@ -965,7 +1063,7 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
   }
 
   /**
-   * @param {!Element} element
+   * @param {!HTMLElement} element
    * @param {number} lineNumber
    * @param {number=} startColumn
    * @param {number=} endColumn
@@ -985,7 +1083,7 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
   }
 
   /**
-   * @param {!Element} element
+   * @param {!HTMLElement} element
    * @param {number} lineNumber
    * @param {number} startColumn
    * @param {number} endColumn
@@ -1054,6 +1152,7 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
     this.scrollLineIntoView(lineNumber);
     if (shouldHighlight) {
       this._codeMirror.addLineClass(
+          // @ts-ignore the `null` argument should be a string?
           this._highlightedLine, null, this._readOnly ? 'cm-readonly-highlight' : 'cm-highlight');
       if (!this._readOnly) {
         this._clearHighlightTimeout = setTimeout(this.clearPositionHighlight.bind(this), 2000);
@@ -1070,6 +1169,7 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
 
     if (this._highlightedLine) {
       this._codeMirror.removeLineClass(
+          // @ts-ignore the `null` argument should be a string?
           this._highlightedLine, null, this._readOnly ? 'cm-readonly-highlight' : 'cm-highlight');
     }
     delete this._highlightedLine;
@@ -1089,20 +1189,21 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
    */
   _updatePaddingBottom(width, height) {
     let newPaddingBottom = 0;
-    const linesElement = this._codeMirrorElement.getElementsByClassName('CodeMirror-lines')[0];
+    const linesElement =
+        /** @type {!HTMLElement} */ (this._codeMirrorElement.getElementsByClassName('CodeMirror-lines')[0]);
 
     if (this._options.padBottom) {
       const scrollInfo = this._codeMirror.getScrollInfo();
       const lineCount = this._codeMirror.lineCount();
       if (lineCount > 1) {
         newPaddingBottom =
+            // @ts-ignore https://crbug.com/1151919 CodeMirror types are incorrect
             Math.max(scrollInfo.clientHeight - this._codeMirror.getLineHandle(this._codeMirror.lastLine()).height, 0);
       }
     }
-
-    newPaddingBottom += 'px';
-    if (linesElement.style.paddingBottom !== newPaddingBottom) {
-      linesElement.style.paddingBottom = newPaddingBottom;
+    const stringPaddingBottomValue = String(newPaddingBottom) + 'px';
+    if (linesElement.style.paddingBottom !== stringPaddingBottomValue) {
+      linesElement.style.paddingBottom = stringPaddingBottomValue;
       this._codeMirror.setSize(width, height);
     }
   }
@@ -1150,7 +1251,9 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
     this._editorSizeInSync = true;
     if (this._selectionSetScheduled) {
       delete this._selectionSetScheduled;
-      this.setSelection(this._lastSelection);
+      if (this._lastSelection) {
+        this.setSelection(this._lastSelection);
+      }
     }
   }
 
@@ -1200,9 +1303,10 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
     return new TextUtils.TextRange.TextRange(lineNumber, wordStart, lineNumber, wordEnd);
   }
 
+  // https://crbug.com/1151919 first * = CodeMirror.Editor, second * = CodeMirror.EditorChangeLinkedList
   /**
-   * @param {!CodeMirror} codeMirror
-   * @param {!Array.<!CodeMirror.ChangeObject>} changes
+   * @param {*} codeMirror
+   * @param {*} changes
    */
   _changes(codeMirror, changes) {
     if (!changes.length) {
@@ -1241,9 +1345,10 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
     }
   }
 
+  // https://crbug.com/1151919 first * = CodeMirror.Editor, second and third * = CodeMirror.Pos
   /**
-   * @param {!CodeMirror} codeMirror
-   * @param {{ranges: !Array.<{head: !CodeMirror.Pos, anchor: !CodeMirror.Pos}>}} selection
+   * @param {*} codeMirror
+   * @param {{ranges: !Array.<{head: *, anchor: *}>}} selection
    */
   _beforeSelectionChange(codeMirror, selection) {
     this._selectNextOccurrenceController.selectionWillChange();
@@ -1315,7 +1420,7 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
    * @return {?TextUtils.TextRange.TextRange}
    */
   lastSelection() {
-    return this._lastSelection;
+    return this._lastSelection || null;
   }
 
   /**
@@ -1330,7 +1435,11 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
       return;
     }
     const pos = toPos(textRange);
-    this._codeMirror.setSelection(pos.start, pos.end, {scroll: !dontScroll});
+    // https://crbug.com/1151919 both * = CodeMirror.Position
+    const startAsPosition = /** @type {*} */ (/** @type {*} */ (pos.start));
+    const endAsPosition = /** @type {*} */ (/** @type {*} */ (pos.end));
+    const scroll = !dontScroll;
+    this._codeMirror.setSelection(startAsPosition, endAsPosition, {scroll});
   }
 
   /**
@@ -1462,7 +1571,9 @@ export class CodeMirrorTextEditor extends UI.Widget.VBox {
     this._placeholderElement.remove();
 
     if (this.linesCount === 1 && !this.line(0)) {
+      // @ts-ignore https://crbug.com/1151919 CodeMirror types are incorrect
       this._codeMirror.display.lineSpace.insertBefore(
+          // @ts-ignore https://crbug.com/1151919 CodeMirror types are incorrect
           this._placeholderElement, this._codeMirror.display.lineSpace.firstChild);
     }
   }
@@ -1476,17 +1587,26 @@ CodeMirrorTextEditor._overrideModeWithPrefixedTokens('css', 'css-');
 CodeMirrorTextEditor._overrideModeWithPrefixedTokens('javascript', 'js-');
 CodeMirrorTextEditor._overrideModeWithPrefixedTokens('xml', 'xml-');
 
+// @ts-ignore https://crbug.com/1151919 CodeMirror types are incorrect
 CodeMirror.commands.autocomplete = CodeMirrorTextEditor.autocompleteCommand;
+// @ts-expect-error TS doesn't find the property even though it's defined in codemirror-legacy.d.ts
 CodeMirror.commands.undoLastSelection = CodeMirrorTextEditor.undoLastSelectionCommand;
+// @ts-expect-error TS doesn't find the property even though it's defined in codemirror-legacy.d.ts
 CodeMirror.commands.selectNextOccurrence = CodeMirrorTextEditor.selectNextOccurrenceCommand;
+// @ts-expect-error TS doesn't find the property even though it's defined in codemirror-legacy.d.ts
 CodeMirror.commands.moveCamelLeft = CodeMirrorTextEditor.moveCamelLeftCommand.bind(null, false);
+// @ts-expect-error TS doesn't find the property even though it's defined in codemirror-legacy.d.ts
 CodeMirror.commands.selectCamelLeft = CodeMirrorTextEditor.moveCamelLeftCommand.bind(null, true);
+// @ts-expect-error TS doesn't find the property even though it's defined in codemirror-legacy.d.ts
 CodeMirror.commands.moveCamelRight = CodeMirrorTextEditor.moveCamelRightCommand.bind(null, false);
+// @ts-expect-error TS doesn't find the property even though it's defined in codemirror-legacy.d.ts
 CodeMirror.commands.selectCamelRight = CodeMirrorTextEditor.moveCamelRightCommand.bind(null, true);
 
+// https://crbug.com/1151919 * = CodeMirror.Editor
 /**
- * @param {!CodeMirror} codeMirror
+ * @param {*} codeMirror
  */
+// @ts-expect-error TS doesn't find the property even though it's defined in codemirror-legacy.d.ts
 CodeMirror.commands.UserIndent = function(codeMirror) {
   const ranges = codeMirror.listSelections();
   if (ranges.length === 0) {
@@ -1502,10 +1622,12 @@ CodeMirror.commands.UserIndent = function(codeMirror) {
   codeMirror.replaceSelection(indentation);
 };
 
+// https://crbug.com/1151919 * = CodeMirror.Editor
 /**
- * @param {!CodeMirror} codeMirror
+ * @param {*} codeMirror
  * @return {!Object|undefined}
  */
+// @ts-expect-error TS doesn't find the property even though it's defined in codemirror-legacy.d.ts
 CodeMirror.commands.indentLessOrPass = function(codeMirror) {
   const selections = codeMirror.listSelections();
   if (selections.length === 1) {
@@ -1515,17 +1637,21 @@ CodeMirror.commands.indentLessOrPass = function(codeMirror) {
     }
   }
   codeMirror.execCommand('indentLess');
+  return undefined;
 };
 
+// https://crbug.com/1151919 * = CodeMirror.Editor
 /**
- * @param {!CodeMirror} codeMirror
+ * @param {*} codeMirror
  */
+// @ts-ignore https://crbug.com/1151919 CodeMirror types are incorrect
 CodeMirror.commands.gotoMatchingBracket = function(codeMirror) {
   const updatedSelections = [];
   const selections = codeMirror.listSelections();
   for (let i = 0; i < selections.length; ++i) {
     const selection = selections[i];
     const cursor = selection.head;
+    // @ts-ignore findMatchingBracket types are incorrect
     const matchingBracket = codeMirror.findMatchingBracket(cursor, false, {maxScanLines: 10000});
     let updatedHead = cursor;
     if (matchingBracket && matchingBracket.match) {
@@ -1537,38 +1663,44 @@ CodeMirror.commands.gotoMatchingBracket = function(codeMirror) {
   codeMirror.setSelections(updatedSelections);
 };
 
+// https://crbug.com/1151919 * = CodeMirror.Editor
 /**
- * @param {!CodeMirror} codemirror
+ * @param {*} codemirror
  */
+// @ts-ignore https://crbug.com/1151919 CodeMirror types are incorrect
 CodeMirror.commands.undoAndReveal = function(codemirror) {
   const scrollInfo = codemirror.getScrollInfo();
   codemirror.execCommand('undo');
   const cursor = codemirror.getCursor('start');
-  codemirror._codeMirrorTextEditor._innerRevealLine(cursor.line, scrollInfo);
-  const autocompleteController = codemirror._codeMirrorTextEditor._autocompleteController;
+  CodeMirrorTextEditor.getForCodeMirror(codemirror)._innerRevealLine(cursor.line, scrollInfo);
+  const autocompleteController = CodeMirrorTextEditor.getForCodeMirror(codemirror)._autocompleteController;
   if (autocompleteController) {
     autocompleteController.clearAutocomplete();
   }
 };
 
+// https://crbug.com/1151919 * = CodeMirror.Editor
 /**
- * @param {!CodeMirror} codemirror
+ * @param {*} codemirror
  */
+// @ts-ignore https://crbug.com/1151919 CodeMirror types are incorrect
 CodeMirror.commands.redoAndReveal = function(codemirror) {
   const scrollInfo = codemirror.getScrollInfo();
   codemirror.execCommand('redo');
   const cursor = codemirror.getCursor('start');
-  codemirror._codeMirrorTextEditor._innerRevealLine(cursor.line, scrollInfo);
-  const autocompleteController = codemirror._codeMirrorTextEditor._autocompleteController;
+  CodeMirrorTextEditor.getForCodeMirror(codemirror)._innerRevealLine(cursor.line, scrollInfo);
+  const autocompleteController = CodeMirrorTextEditor.getForCodeMirror(codemirror)._autocompleteController;
   if (autocompleteController) {
     autocompleteController.clearAutocomplete();
   }
 };
 
+// https://crbug.com/1151919 * = CodeMirror.Editor
 /**
- * @param {!CodeMirror} codemirror
+ * @param {*} codemirror
  * @return {!Object|undefined}
  */
+// @ts-ignore https://crbug.com/1151919 CodeMirror types are incorrect
 CodeMirror.commands.dismiss = function(codemirror) {
   const selections = codemirror.listSelections();
   const selection = selections[0];
@@ -1577,35 +1709,45 @@ CodeMirror.commands.dismiss = function(codemirror) {
       return CodeMirror.Pass;
     }
     codemirror.setSelection(selection.anchor, selection.anchor, {scroll: false});
-    codemirror._codeMirrorTextEditor.scrollLineIntoView(selection.anchor.line);
+    CodeMirrorTextEditor.getForCodeMirror(codemirror).scrollLineIntoView(selection.anchor.line);
     return;
   }
 
   codemirror.setSelection(selection.anchor, selection.head, {scroll: false});
-  codemirror._codeMirrorTextEditor.scrollLineIntoView(selection.anchor.line);
+  CodeMirrorTextEditor.getForCodeMirror(codemirror).scrollLineIntoView(selection.anchor.line);
+  return undefined;
 };
 
+// https://crbug.com/1151919 * = CodeMirror.Editor
 /**
- * @param {!CodeMirror} codemirror
+ * @param {*} codemirror
  * @return {!Object|undefined}
  */
+// @ts-ignore https://crbug.com/1151919 CodeMirror types are incorrect
 CodeMirror.commands.goSmartPageUp = function(codemirror) {
-  if (codemirror._codeMirrorTextEditor.selection().equal(TextUtils.TextRange.TextRange.createFromLocation(0, 0))) {
+  if (CodeMirrorTextEditor.getForCodeMirror(codemirror)
+          .selection()
+          .equal(TextUtils.TextRange.TextRange.createFromLocation(0, 0))) {
     return CodeMirror.Pass;
   }
   codemirror.execCommand('goPageUp');
+  return undefined;
 };
 
+// https://crbug.com/1151919 * = CodeMirror.Editor
 /**
- * @param {!CodeMirror} codemirror
+ * @param {*} codemirror
  * @return {!Object|undefined}
  */
+// @ts-ignore https://crbug.com/1151919 CodeMirror types are incorrect
 CodeMirror.commands.goSmartPageDown = function(codemirror) {
-  if (codemirror._codeMirrorTextEditor.selection().equal(
-          codemirror._codeMirrorTextEditor.fullRange().collapseToEnd())) {
+  if (CodeMirrorTextEditor.getForCodeMirror(codemirror)
+          .selection()
+          .equal(CodeMirrorTextEditor.getForCodeMirror(codemirror).fullRange().collapseToEnd())) {
     return CodeMirror.Pass;
   }
   codemirror.execCommand('goPageDown');
+  return undefined;
 };
 
 /**
@@ -1613,9 +1755,10 @@ CodeMirror.commands.goSmartPageDown = function(codemirror) {
  * @unrestricted
  */
 export class CodeMirrorPositionHandle {
+  // https://crbug.com/1151919 first * = CodeMirror.Editor, second * = CodeMirror.Pos
   /**
-   * @param {!CodeMirror} codeMirror
-   * @param {!CodeMirror.Pos} pos
+   * @param {*} codeMirror
+   * @param {*} pos
    */
   constructor(codeMirror, pos) {
     this._codeMirror = codeMirror;
@@ -1651,9 +1794,10 @@ export class CodeMirrorPositionHandle {
  * @unrestricted
  */
 export class SelectNextOccurrenceController {
+  // https://crbug.com/1151919 * = CodeMirror.Editor
   /**
    * @param {!CodeMirrorTextEditor} textEditor
-   * @param {!CodeMirror} codeMirror
+   * @param {*} codeMirror
    */
   constructor(textEditor, codeMirror) {
     this._textEditor = textEditor;
@@ -1702,9 +1846,10 @@ export class SelectNextOccurrenceController {
     }
 
     const last = selections[selections.length - 1];
+    /** @type {?TextUtils.TextRange.TextRange} */
     let next = last;
     do {
-      next = this._findNextOccurrence(next, !!this._fullWordSelection);
+      next = next ? this._findNextOccurrence(next, !!this._fullWordSelection) : null;
     } while (next && this._findRange(selections, next) && !next.equal(last));
 
     if (!next) {
@@ -1747,9 +1892,19 @@ export class SelectNextOccurrenceController {
    */
   _findNextOccurrence(range, fullWord) {
     range = range.normalize();
-    let matchedLineNumber;
-    let matchedColumnNumber;
+    /** @type {number|undefined} */
+    let matchedLineNumber = undefined;
+    /** @type {number|undefined} */
+    let matchedColumnNumber = undefined;
     const textToFind = this._textEditor.text(range);
+    /**
+     *
+     * @param {!RegExp} wordRegex
+     * @param {number} lineNumber
+     * @param {string} lineText
+     * @param {number} from
+     * @param {number} to
+     */
     function findWordInLine(wordRegex, lineNumber, lineText, from, to) {
       if (typeof matchedLineNumber === 'number') {
         return true;
@@ -1764,11 +1919,19 @@ export class SelectNextOccurrenceController {
       return true;
     }
 
+    /** @type {number} */
     let iteratedLineNumber;
+    // https://crbug.com/1151919 * = CodeMirror.LineHandle
+    /**
+     *
+     * @param {!RegExp} regex
+     * @param {*} lineHandle
+     */
     function lineIterator(regex, lineHandle) {
       if (findWordInLine(regex, iteratedLineNumber++, lineHandle.text, 0, lineHandle.text.length)) {
         return true;
       }
+      return undefined;
     }
 
     let regexSource = textToFind.escapeForRegExp();
@@ -1785,11 +1948,13 @@ export class SelectNextOccurrenceController {
     this._codeMirror.eachLine(0, range.startLine, lineIterator.bind(null, wordRegex));
     findWordInLine(wordRegex, range.startLine, currentLineText, 0, range.startColumn);
 
-    if (typeof matchedLineNumber !== 'number') {
+    if (typeof matchedLineNumber !== 'number' || typeof matchedColumnNumber !== 'number') {
       return null;
     }
+    const textToFindLength = textToFind ? textToFind.length : 0;
     return new TextUtils.TextRange.TextRange(
-        matchedLineNumber, matchedColumnNumber, matchedLineNumber, matchedColumnNumber + textToFind.length);
+        /** @type {number} */ (matchedLineNumber), /** @type {number} */ (matchedColumnNumber),
+        /** @type {number} */ (matchedLineNumber), matchedColumnNumber + textToFindLength);
   }
 }
 
@@ -1802,13 +1967,16 @@ export class TextEditorPositionHandle {
    * @return {?{lineNumber: number, columnNumber: number}}
    */
   resolve() {
+    throw new Error('Not implemented here.');
   }
 
   /**
    * @param {!TextEditorPositionHandle} positionHandle
    * @return {boolean}
    */
-  equal(positionHandle) {}
+  equal(positionHandle) {
+    throw new Error('Not implemented here.');
+  }
 }
 
 /** @type {!Set<!Root.Runtime.Extension>} */
@@ -1830,14 +1998,13 @@ export class CodeMirrorMimeMode {
  * @unrestricted
  */
 export class TextEditorBookMark {
+  // https://crbug.com/1151919 * = CodeMirror.TextMarker
   /**
-   * @param {!CodeMirror.TextMarker} marker
+   * @param {*} marker
    * @param {symbol} type
    * @param {!CodeMirrorTextEditor} editor
    */
   constructor(marker, type, editor) {
-    marker[TextEditorBookMark._symbol] = this;
-
     this._marker = marker;
     this._type = type;
     this._editor = editor;
@@ -1847,6 +2014,7 @@ export class TextEditorBookMark {
     const position = this._marker.find();
     this._marker.clear();
     if (position) {
+      // @ts-ignore https://crbug.com/1151919 CodeMirror types are incorrect
       this._editor._updateDecorations(position.line);
     }
   }
@@ -1855,6 +2023,7 @@ export class TextEditorBookMark {
     this._marker.changed();
     const position = this._marker.find();
     if (position) {
+      // @ts-ignore https://crbug.com/1151919 CodeMirror types are incorrect
       this._editor._updateDecorations(position.line);
     }
   }
@@ -1871,11 +2040,10 @@ export class TextEditorBookMark {
    */
   position() {
     const pos = this._marker.find();
+    // @ts-ignore https://crbug.com/1151919 CodeMirror types are incorrect
     return pos ? TextUtils.TextRange.TextRange.createFromLocation(pos.line, pos.ch) : null;
   }
 }
-
-TextEditorBookMark._symbol = Symbol('TextEditorBookMark');
 
 /**
  * @implements {UI.TextEditor.TextEditorFactory}
@@ -1899,17 +2067,25 @@ export class CodeMirrorTextEditorFactory {
 // Because we target up-to-date Chrome, we can guarantee consistent input events. This lets us leave the current
 // line from the editor in our <textarea>. CodeMirror still expects a mostly empty <textarea>, so we pass CodeMirror a
 // fake <textarea> that only contains the users input.
+// @ts-ignore
 export class DevToolsAccessibleTextArea extends CodeMirror.inputStyles.textarea {
+  // https://crbug.com/1151919 * = CodeMirror.Editor
   /**
-   * @param {!CodeMirror.Editor} codeMirror
+   * @param {*} codeMirror
    */
   constructor(codeMirror) {
     super(codeMirror);
 
     /** @type {!HTMLTextAreaElement} */
     this.textarea;
-    /** @type {!CodeMirror.Editor} */
+    // https://crbug.com/1151919 * = CodeMirror.Editor
+    /** @type {*} */
     this.cm;
+
+    this.contextMenuPending = false;
+    this.composing = false;
+    /** @type {string} */
+    this.prevInput;
   }
   /**
    * @override
@@ -1945,7 +2121,7 @@ export class DevToolsAccessibleTextArea extends CodeMirror.inputStyles.textarea 
     // When navigating around the document, keep the current visual line in the textarea.
     const cursor = this.cm.getCursor();
     let start, end;
-    if (this.cm.options.lineWrapping) {
+    if (this.cm.getOption('lineWrapping')) {
       // To get the visual line, compute the leftmost and rightmost character positions.
       const top = this.cm.charCoords(cursor, 'page').top;
       start = this.cm.coordsChar({left: -Infinity, top});
@@ -1997,7 +2173,7 @@ export class DevToolsAccessibleTextArea extends CodeMirror.inputStyles.textarea 
     // Pass a fake textarea into super.poll that only contains the users input.
     /** @type {!HTMLTextAreaElement} */
     const placeholder = this.textarea;
-    this.textarea = /** @type {!HTMLTextAreaElement} */ (createElement('textarea'));
+    this.textarea = /** @type {!HTMLTextAreaElement} */ (document.createElement('textarea'));
     this.textarea.value = text.substring(start, text.length - end);
     this.textarea.setSelectionRange(placeholder.selectionStart - start, placeholder.selectionEnd - start);
     this.prevInput = '';
@@ -2008,13 +2184,16 @@ export class DevToolsAccessibleTextArea extends CodeMirror.inputStyles.textarea 
   }
 }
 
+// @ts-ignore
 CodeMirror.inputStyles.devToolsAccessibleTextArea = DevToolsAccessibleTextArea;
 
+// https://crbug.com/1151919 * = CodeMirror.LineWidget
 /**
  * @typedef {{
  *  element: !Element,
- *  widget: !CodeMirror.LineWidget,
- *  update: ?function()
+ *  widget: *,
+ *  update: ?function():void
  * }}
  */
+// @ts-ignore typedef
 export let Decoration;

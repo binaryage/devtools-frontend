@@ -48,6 +48,7 @@ devtools_module("sdk") {
     "NetworkLog.js",
     "NetworkManager.js",
     "NetworkRequest.js",
+    "OverlayColorGenerator.js",
     "OverlayModel.js",
     "PageResourceLoader.js",
     "PaintProfiler.js",
@@ -79,7 +80,6 @@ devtools_module("sdk") {
     "../platform:bundle",
     "../protocol_client:bundle",
     "../text_utils:bundle",
-    "wasm_source_map",
   ]
 }
 

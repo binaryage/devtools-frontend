@@ -900,14 +900,55 @@ export class SourcesPanel extends UI.Panel.Panel {
     if (!(target instanceof SDK.RemoteObject.RemoteObject)) {
       return;
     }
+    const indent = Common.Settings.Settings.instance().moduleSetting('textEditorIndent').get();
     const remoteObject = /** @type {!SDK.RemoteObject.RemoteObject} */ (target);
     const executionContext = UI.Context.Context.instance().flavor(SDK.RuntimeModel.ExecutionContext);
+    const copyContextMenuTitle = remoteObject.subtype === 'node' ? 'outerHTML' : remoteObject.type;
+
     contextMenu.debugSection().appendItem(
         ls`Store ${remoteObject.type} as global variable`,
         () => SDK.ConsoleModel.ConsoleModel.instance().saveToTempVariable(executionContext, remoteObject));
+
+    // Copy object context menu.
+    if (remoteObject.type !== 'function') {
+      const copyDecodedValueHandler = async () => {
+        const result = await remoteObject.callFunctionJSON(toStringForClipboard, [{
+                                                             value: {
+                                                               subtype: remoteObject.subtype,
+                                                               indent: indent,
+                                                             }
+                                                           }]);
+        Host.InspectorFrontendHost.InspectorFrontendHostInstance.copyText(result);
+      };
+
+      contextMenu.clipboardSection().appendItem(ls`Copy ${copyContextMenuTitle}`, copyDecodedValueHandler);
+    }
+
     if (remoteObject.type === 'function') {
       contextMenu.debugSection().appendItem(
           ls`Show function definition`, this._showFunctionDefinition.bind(this, remoteObject));
+    }
+
+    /**
+     * @param {*} data
+     * @this {Object}
+     * @suppressReceiverCheck
+     */
+    function toStringForClipboard(data) {
+      const subtype = data.subtype;
+      const indent = data.indent;
+
+      if (subtype === 'node') {
+        return this instanceof Element ? this.outerHTML : undefined;
+      }
+      if (subtype && typeof this === 'undefined') {
+        return subtype + '';
+      }
+      try {
+        return JSON.stringify(this, null, indent);
+      } catch (error) {
+        return String(this);
+      }
     }
   }
 
@@ -1008,11 +1049,6 @@ export class SourcesPanel extends UI.Panel.Panel {
       this._sidebarPaneStack.showView(this._threadsSidebarPane);
     }
 
-    if (!vertically) {
-      this._sidebarPaneStack.appendView(this._watchSidebarPane);
-    }
-
-    this._sidebarPaneStack.showView(this._callstackPane);
     const jsBreakpoints =
         /** @type {!UI.View.View} */ (UI.ViewManager.ViewManager.instance().view('sources.jsBreakpoints'));
     const scopeChainView =
@@ -1025,8 +1061,10 @@ export class SourcesPanel extends UI.Panel.Panel {
 
     if (!vertically) {
       // Populate the rest of the stack.
-      this._sidebarPaneStack.showView(scopeChainView);
+      this._sidebarPaneStack.appendView(this._watchSidebarPane);
       this._sidebarPaneStack.showView(jsBreakpoints);
+      this._sidebarPaneStack.showView(scopeChainView);
+      this._sidebarPaneStack.showView(this._callstackPane);
       this._extensionSidebarPanesContainer = this._sidebarPaneStack;
       this.sidebarPaneView = vbox;
       this._splitWidget.uninstallResizer(this._debugToolbar.gripElementForResize());
@@ -1036,6 +1074,7 @@ export class SourcesPanel extends UI.Panel.Panel {
 
       // Populate the left stack.
       this._sidebarPaneStack.showView(jsBreakpoints);
+      this._sidebarPaneStack.showView(this._callstackPane);
 
       const tabbedLocation =
           UI.ViewManager.ViewManager.instance().createTabbedLocation(this._revealDebuggerSidebar.bind(this));

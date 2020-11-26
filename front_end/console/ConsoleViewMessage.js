@@ -200,8 +200,10 @@ export class ConsoleViewMessage {
           } else {
             messageElement.textContent = Common.UIString.UIString('Console was cleared');
           }
-          messageElement.title = ls`Clear all messages with ${
-              UI.ShortcutRegistry.ShortcutRegistry.instance().shortcutTitleForAction('console.clear')}`;
+          UI.Tooltip.Tooltip.install(
+              messageElement,
+              ls`Clear all messages with ${
+                  UI.ShortcutRegistry.ShortcutRegistry.instance().shortcutTitleForAction('console.clear')}`);
           break;
         case SDK.ConsoleModel.MessageType.Dir: {
           const obj = this._message.parameters ? this._message.parameters[0] : undefined;
@@ -616,9 +618,10 @@ export class ConsoleViewMessage {
 
     const note = titleElement.createChild('span', 'object-state-note info-note');
     if (this._message.type === SDK.ConsoleModel.MessageType.QueryObjectResult) {
-      note.title = ls`This value will not be collected until console is cleared.`;
+      UI.Tooltip.Tooltip.install(note, ls`This value will not be collected until console is cleared.`);
     } else {
-      note.title = ls`This value was evaluated upon first expanding. It may have changed since then.`;
+      UI.Tooltip.Tooltip.install(
+          note, ls`This value was evaluated upon first expanding. It may have changed since then.`);
     }
 
     const section = new ObjectUI.ObjectPropertiesSection.ObjectPropertiesSection(obj, titleElement, this._linkifier);
@@ -653,7 +656,7 @@ export class ConsoleViewMessage {
       result.appendChild(functionElement);
       if (targetFunction !== func) {
         const note = result.createChild('span', 'object-info-state-note');
-        note.title = Common.UIString.UIString('Function was resolved from bound function.');
+        UI.Tooltip.Tooltip.install(note, Common.UIString.UIString('Function was resolved from bound function.'));
       }
       result.addEventListener('contextmenu', this._contextMenuEventFired.bind(this, targetFunction), false);
       promise.then(() => this._formattedParameterAsFunctionForTest());
@@ -784,7 +787,7 @@ export class ConsoleViewMessage {
       if (wasThrown) {
         const element = rootElement.createChild('span');
         element.textContent = Common.UIString.UIString('<exception>');
-        element.title = /** @type {string} */ (object.description);
+        UI.Tooltip.Tooltip.install(element, /** @type {string} */ (object.description));
       } else if (isArrayEntry) {
         rootElement.appendChild(this._formatAsArrayEntry(object));
       } else {
@@ -1067,7 +1070,7 @@ export class ConsoleViewMessage {
         this._timestampElement.classList.add('console-timestamp');
       }
       this._timestampElement.textContent = UI.UIUtils.formatTimestamp(this._message.timestamp, false) + ' ';
-      this._timestampElement.title = UI.UIUtils.formatTimestamp(this._message.timestamp, true);
+      UI.Tooltip.Tooltip.install(this._timestampElement, UI.UIUtils.formatTimestamp(this._message.timestamp, true));
       this._contentElement.insertBefore(this._timestampElement, this._contentElement.firstChild);
     } else if (this._timestampElement) {
       this._timestampElement.remove();

@@ -32,8 +32,12 @@ export class ColorSwatch extends HTMLElement {
   constructor() {
     super();
     this.shadow.adoptedStyleSheets = [
-      ...getStyleSheets('inline_editor/colorSwatch.css', {patchThemeSupport: false}),
+      ...getStyleSheets('inline_editor/colorSwatch.css', {enableLegacyPatching: false}),
     ];
+  }
+
+  static isColorSwatch(element: Element) {
+    return element.localName === 'devtools-color-swatch';
   }
 
   get color(): Common.Color.Color|null {
@@ -43,6 +47,12 @@ export class ColorSwatch extends HTMLElement {
   get format(): string|null {
     return this._format;
   }
+
+  get anchorBox(): AnchorBox|null {
+    const swatch = this.shadow.querySelector('.color-swatch');
+    return swatch ? swatch.boxInWindow() : null;
+  }
+
   /**
    * Render this swatch given a color object or text to be parsed as a color.
    * @param color The color object or string to use for this swatch.

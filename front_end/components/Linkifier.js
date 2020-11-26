@@ -185,7 +185,7 @@ export class Linkifier {
       if (fallback) {
         // @ts-ignore
         anchor.href = fallback.href;
-        anchor.title = fallback.title;
+        UI.Tooltip.Tooltip.install(anchor, fallback.title);
         anchor.className = fallback.className;
         anchor.textContent = fallback.textContent;
         const fallbackInfo = infoByAnchor.get(fallback);
@@ -469,7 +469,7 @@ export class Linkifier {
     } else if (typeof uiLocation.lineNumber === 'number') {
       titleText += ':' + (uiLocation.lineNumber + 1);
     }
-    anchor.title = titleText;
+    UI.Tooltip.Tooltip.install(anchor, titleText);
     anchor.classList.toggle('webkit-html-blackbox-link', await liveLocation.isBlackboxed());
     Linkifier._updateLinkDecorations(anchor);
   }
@@ -601,7 +601,7 @@ export class Linkifier {
     }
     link.classList.add('devtools-link');
     if (title) {
-      link.title = title;
+      UI.Tooltip.Tooltip.install(link, title);
     }
     if (href) {
       // @ts-ignore
@@ -724,16 +724,8 @@ export class Linkifier {
    * @param {?Element} link
    * @return {?_LinkInfo}
    */
-  static _linkInfo(link) {
-    return /** @type {?_LinkInfo} */ (link ? infoByAnchor.get(link) || null : null);
-  }
-
-  /**
-   * @param {?Element} link
-   * @return {?_LinkInfo}
-   */
   static linkInfo(link) {
-    return Linkifier._linkInfo(link);
+    return /** @type {?_LinkInfo} */ (link ? infoByAnchor.get(link) || null : null);
   }
 
   /**
@@ -750,6 +742,14 @@ export class Linkifier {
       return false;
     }
     return Linkifier.invokeFirstAction(linkInfo);
+  }
+
+  /**
+   *
+   * @param {!_LinkInfo} linkInfo
+   */
+  static _handleClickFromNewComponentLand(linkInfo) {
+    Linkifier.invokeFirstAction(linkInfo);
   }
 
   /**
@@ -993,6 +993,29 @@ export class LinkHandlerSettingUI {
     return UI.SettingsUI.createCustomSetting(Common.UIString.UIString('Link handling:'), this._element);
   }
 }
+
+let listeningToNewEvents = false;
+function listenForNewComponentLinkifierEvents() {
+  if (listeningToNewEvents) {
+    return;
+  }
+
+  listeningToNewEvents = true;
+
+  window.addEventListener(
+      'linkifier-click',
+      /**
+   *
+   * @param {!Event} event
+   */
+      function(event) {
+        const unknownEvent = /** @type {?} */ (event);
+        const eventWithData = /** @type {!{data: !_LinkInfo}} */ (unknownEvent);
+        Linkifier._handleClickFromNewComponentLand(eventWithData.data);
+      });
+}
+
+listenForNewComponentLinkifierEvents();
 
 /**
  * @implements {UI.ContextMenu.Provider}

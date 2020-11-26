@@ -11,12 +11,10 @@
     }
   ],
   "dependencies": [
-    "elements"
+    "elements",
+    "i18n"
   ],
   "modules": [
-    "animation-legacy.js"
-  ],
-  "skip_compilation": [
     "animation-legacy.js"
   ],
   "resources": [

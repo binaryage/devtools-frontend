@@ -53,7 +53,8 @@ export class RequestCookiesView extends UI.Widget.Widget {
     this._requestCookiesTitle = this.element.createChild('div');
     const titleText = this._requestCookiesTitle.createChild('span', 'request-cookies-title');
     titleText.textContent = ls`Request Cookies`;
-    titleText.title = ls`Cookies that were sent to the server in the 'cookie' header of the request`;
+    UI.Tooltip.Tooltip.install(
+        titleText, ls`Cookies that were sent to the server in the 'cookie' header of the request`);
 
     const requestCookiesCheckbox = /** @type {!UI.UIUtils.CheckboxLabel} */ (UI.SettingsUI.createSettingCheckbox(
         ls`show filtered out request cookies`, this._showFilteredOutCookiesSetting,
@@ -81,8 +82,8 @@ export class RequestCookiesView extends UI.Widget.Widget {
 
     this._malformedResponseCookiesTitle = this.element.createChild('div', 'request-cookies-title');
     this._malformedResponseCookiesTitle.textContent = ls`Malformed Response Cookies`;
-    this._malformedResponseCookiesTitle.title = ls
-    `Cookies that were received from the server in the 'set-cookie' header of the response but were malformed`;
+    UI.Tooltip.Tooltip.install(this._malformedResponseCookiesTitle, ls
+    `Cookies that were received from the server in the 'set-cookie' header of the response but were malformed`);
 
     this._malformedResponseCookiesList = this.element.createChild('div');
   }

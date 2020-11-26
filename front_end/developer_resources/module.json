@@ -13,6 +13,7 @@
   ],
   "dependencies": [
     "common",
+    "i18n",
     "platform",
     "ui",
     "host",
@@ -22,9 +23,6 @@
     "browser_sdk"
   ],
   "modules": [
-    "developer_resources-legacy.js"
-  ],
-  "skip_compilation": [
     "developer_resources-legacy.js"
   ],
   "resources": [

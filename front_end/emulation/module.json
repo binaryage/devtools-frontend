@@ -31,6 +31,7 @@
       "actionId": "emulation.capture-screenshot",
       "category": "Screenshot",
       "className": "Emulation.DeviceModeWrapper.ActionDelegate",
+      "condition": "can_dock",
       "title": "Capture screenshot"
     },
     {
@@ -51,6 +52,7 @@
       "actionId": "emulation.capture-full-height-screenshot",
       "category": "Screenshot",
       "className": "Emulation.DeviceModeWrapper.ActionDelegate",
+      "condition": "can_dock",
       "title": "Capture full size screenshot"
     },
     {
@@ -58,6 +60,7 @@
       "actionId": "emulation.capture-node-screenshot",
       "category": "Screenshot",
       "className": "Emulation.DeviceModeWrapper.ActionDelegate",
+      "condition": "can_dock",
       "title": "Capture node screenshot"
     },
     {
@@ -294,19 +297,7 @@
     "mobile_throttling"
   ],
   "modules": [
-    "emulation.js",
-    "emulation-legacy.js",
-    "AdvancedApp.js",
-    "DeviceModeModel.js",
-    "DeviceModeToolbar.js",
-    "DeviceModeView.js",
-    "DeviceModeWrapper.js",
-    "DevicesSettingsTab.js",
-    "EmulatedDevices.js",
-    "InspectedPagePlaceholder.js",
-    "LocationsSettingsTab.js",
-    "MediaQueryInspector.js",
-    "SensorsView.js"
+    "emulation-legacy.js"
   ],
   "resources": [
     "deviceModeToolbar.css",

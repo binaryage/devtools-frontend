@@ -221,11 +221,11 @@ export class DataGridImpl extends Common.ObjectWrapper.ObjectWrapper {
   static setElementText(element, newText, longText) {
     if (longText && newText.length > 1000) {
       element.textContent = newText.trimEndWithMaxLength(1000);
-      (/** @type {!HTMLElement} */ (element)).title = newText;
+      UI.Tooltip.Tooltip.install(element, newText);
       elementToLongTextMap.set(element, newText);
     } else {
       element.textContent = newText;
-      (/** @type {!HTMLElement} */ (element)).title = '';
+      UI.Tooltip.Tooltip.install(element, '');
       elementToLongTextMap.delete(element);
     }
   }
@@ -236,7 +236,7 @@ export class DataGridImpl extends Common.ObjectWrapper.ObjectWrapper {
    */
   static setElementBoolean(element, value) {
     element.textContent = value ? '\u2713' : '';
-    (/** @type {!HTMLElement} */ (element)).title = '';
+    UI.Tooltip.Tooltip.install(element, '');
   }
 
   /**
@@ -1046,7 +1046,7 @@ export class DataGridImpl extends Common.ObjectWrapper.ObjectWrapper {
   }
 
   get scrollContainer() {
-    return this._scrollContainer;
+    return /** @type {!HTMLElement} */ (this._scrollContainer);
   }
 
   _positionResizers() {
@@ -1774,6 +1774,9 @@ export class DataGridNode extends Common.ObjectWrapper.ObjectWrapper {
     }
     if (this._inactive) {
       this._element.classList.add('inactive');
+    }
+    if (this.isCreationNode) {
+      this._element.classList.add('creation-node');
     }
     return this._element;
   }
@@ -2582,7 +2585,6 @@ export class CreationDataGridNode extends DataGridNode {
     super(data, hasChildren);
     /** @type {boolean} */
     this.isCreationNode = true;
-    this.element().classList.add('creation-node');
   }
 
   makeNormal() {

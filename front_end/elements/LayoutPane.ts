@@ -43,26 +43,49 @@ function isBooleanSetting(setting: Setting): setting is BooleanSetting {
 export interface LayoutPaneData {
   settings: Setting[];
   gridElements: LayoutElement[];
+  flexContainerElements?: LayoutElement[];
 }
 
 export class LayoutPane extends HTMLElement {
   private readonly shadow = this.attachShadow({mode: 'open'});
   private settings: Readonly<Setting[]> = [];
   private gridElements: Readonly<LayoutElement[]> = [];
+  private flexContainerElements?: Readonly<LayoutElement[]> = [];
 
   constructor() {
     super();
     this.shadow.adoptedStyleSheets = [
-      ...getStyleSheets('ui/inspectorCommon.css', {patchThemeSupport: true}),
-      ...getStyleSheets('ui/inspectorSyntaxHighlight.css', {patchThemeSupport: true}),
-      ...getStyleSheets('elements/layoutPane.css', {patchThemeSupport: false}),
+      ...getStyleSheets('ui/inspectorCommon.css', {enableLegacyPatching: true}),
+      ...getStyleSheets('ui/inspectorSyntaxHighlight.css', {enableLegacyPatching: true}),
+      ...getStyleSheets('elements/layoutPane.css', {enableLegacyPatching: false}),
     ];
+    this.onSummaryKeyDown = this.onSummaryKeyDown.bind(this);
   }
 
   set data(data: LayoutPaneData) {
     this.settings = data.settings;
     this.gridElements = data.gridElements;
+    this.flexContainerElements = data.flexContainerElements;
     this.render();
+  }
+
+  private onSummaryKeyDown(event: KeyboardEvent) {
+    if (!event.target) {
+      return;
+    }
+    const summaryElement = event.target as HTMLElement;
+    const detailsElement = summaryElement.parentElement as HTMLDetailsElement;
+    if (!detailsElement) {
+      throw new Error('<details> element is not found for a <summary> element');
+    }
+    switch (event.key) {
+      case 'ArrowLeft':
+        detailsElement.open = false;
+        break;
+      case 'ArrowRight':
+        detailsElement.open = true;
+        break;
+    }
   }
 
   private render() {
@@ -70,7 +93,7 @@ export class LayoutPane extends HTMLElement {
     // clang-format off
     render(html`
       <details open>
-        <summary class="header">
+        <summary class="header" @keydown=${this.onSummaryKeyDown}>
           ${ls`Grid`}
         </summary>
         <div class="content-section">
@@ -93,6 +116,25 @@ export class LayoutPane extends HTMLElement {
               </div>` : ''}
           </div>` : ''}
       </details>
+      ${this.flexContainerElements !== undefined ?
+        html`
+        <details open>
+          <summary class="header" @keydown=${this.onSummaryKeyDown}>
+            ${ls`Flexbox`}
+          </summary>
+          ${this.flexContainerElements ?
+            html`<div class="content-section">
+              <h3 class="content-section-title">
+                ${this.flexContainerElements.length ? ls`Flexbox overlays` : ls`No flexbox layouts found on this page`}
+              </h3>
+              ${this.flexContainerElements.length ?
+                html`<div class="elements">
+                  ${this.flexContainerElements.map(element => this.renderElement(element))}
+                </div>` : ''}
+            </div>` : ''}
+        </details>
+        `
+      : ''}
     `, this.shadow, {
       eventContext: this,
     });

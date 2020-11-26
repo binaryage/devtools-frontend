@@ -30,14 +30,15 @@
 
 import * as Common from '../common/common.js';
 import * as Host from '../host/host.js';
-import * as ARIAUtils from './ARIAUtils.js';
 
+import * as ARIAUtils from './ARIAUtils.js';
 import {Icon} from './Icon.js';
 import {KeyboardShortcut, Modifiers} from './KeyboardShortcut.js';
 import {bindCheckbox} from './SettingsUI.js';
 import {Suggestions} from './SuggestBox.js';  // eslint-disable-line no-unused-vars
 import {Events, TextPrompt} from './TextPrompt.js';
 import {ToolbarButton, ToolbarSettingToggle} from './Toolbar.js';  // eslint-disable-line no-unused-vars
+import {Tooltip} from './Tooltip.js';
 import {CheckboxLabel, createTextChild} from './UIUtils.js';
 import {HBox} from './Widget.js';
 
@@ -211,7 +212,7 @@ export class TextFilterUI extends Common.ObjectWrapper.ObjectWrapper {
     this._prompt.initialize(this._completions.bind(this), ' ');
     /** @type {!HTMLElement} */
     this._proxyElement = /** @type {!HTMLElement} */ (this._prompt.attach(this._filterInputElement));
-    this._proxyElement.title = Common.UIString.UIString('e.g. /small[\\d]+/ url:a.com/b');
+    Tooltip.install(this._proxyElement, Common.UIString.UIString('e.g. /small[\\d]+/ url:a.com/b'));
     this._prompt.setPlaceholder(Common.UIString.UIString('Filter'));
     this._prompt.addEventListener(Events.TextChanged, this._valueChanged.bind(this));
 
@@ -311,8 +312,10 @@ export class NamedBitSetFilterUI extends Common.ObjectWrapper.ObjectWrapper {
     this._filtersElement.classList.add('filter-bitset-filter');
     ARIAUtils.markAsListBox(this._filtersElement);
     ARIAUtils.markAsMultiSelectable(this._filtersElement);
-    this._filtersElement.title = Common.UIString.UIString(
-        '%sClick to select multiple types', KeyboardShortcut.shortcutToString('', Modifiers.CtrlOrMeta));
+    Tooltip.install(
+        this._filtersElement,
+        Common.UIString.UIString(
+            '%sClick to select multiple types', KeyboardShortcut.shortcutToString('', Modifiers.CtrlOrMeta)));
 
     /** @type {!WeakMap<!HTMLElement, string>} */
     this._typeFilterElementTypeNames = new WeakMap();

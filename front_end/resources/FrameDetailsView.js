@@ -71,7 +71,7 @@ export class FrameDetailsView extends UI.ThrottledWidget.ThrottledWidget {
   async doUpdate() {
     this._urlFieldValue.removeChildren();
     this._urlStringElement.textContent = this._frame.url;
-    this._urlStringElement.title = this._frame.url;
+    UI.Tooltip.Tooltip.install(this._urlStringElement, this._frame.url);
     this._urlFieldValue.appendChild(this._urlStringElement);
     if (!this._frame.unreachableUrl()) {
       const sourceCode = this.uiSourceCodeForFrame(this._frame);
@@ -83,7 +83,7 @@ export class FrameDetailsView extends UI.ThrottledWidget.ThrottledWidget {
     this._maybeAppendLinkForUnreachableUrl();
     if (this._frame.securityOrigin && this._frame.securityOrigin !== '://') {
       this._originStringElement.textContent = this._frame.securityOrigin;
-      this._originStringElement.title = this._frame.securityOrigin;
+      UI.Tooltip.Tooltip.install(this._originStringElement, this._frame.securityOrigin);
       this._generalSection.setFieldVisible(ls`Origin`, true);
     } else {
       this._generalSection.setFieldVisible(ls`Origin`, false);
@@ -213,9 +213,11 @@ export class FrameDetailsView extends UI.ThrottledWidget.ThrottledWidget {
       const sabTransferAvailable = features.includes(Protocol.Page.GatedAPIFeatures.SharedArrayBuffersTransferAllowed);
       this._apiSharedArrayBuffer.textContent =
           sabTransferAvailable ? ls`available, transferable` : ls`available, not transferable`;
-      this._apiSharedArrayBuffer.title = sabTransferAvailable ?
-          ls`SharedArrayBuffer constructor is available and SABs can be transferred via postMessage` :
-          ls`SharedArrayBuffer constructor is available but SABs cannot be transferred via postMessage`;
+      UI.Tooltip.Tooltip.install(
+          this._apiSharedArrayBuffer,
+          sabTransferAvailable ?
+              ls`SharedArrayBuffer constructor is available and SABs can be transferred via postMessage` :
+              ls`SharedArrayBuffer constructor is available but SABs cannot be transferred via postMessage`);
       if (!this._frame.isCrossOriginIsolated()) {
         const reasonHint = this._apiSharedArrayBuffer.createChild('span', 'inline-span');
         reasonHint.textContent = ls`⚠️ will require cross-origin isolated context in the future`;
@@ -277,12 +279,12 @@ export class FrameDetailsView extends UI.ThrottledWidget.ThrottledWidget {
       case Protocol.Page.AdFrameType.Root:
         this._generalSection.setFieldVisible(ls`Ad Status`, true);
         this._adStatus.textContent = ls`root`;
-        this._adStatus.title = ls`This frame has been identified as the root frame of an ad`;
+        UI.Tooltip.Tooltip.install(this._adStatus, ls`This frame has been identified as the root frame of an ad`);
         break;
       case Protocol.Page.AdFrameType.Child:
         this._generalSection.setFieldVisible(ls`Ad Status`, true);
         this._adStatus.textContent = ls`child`;
-        this._adStatus.title = ls`This frame has been identified as the a child frame of an ad`;
+        UI.Tooltip.Tooltip.install(this._adStatus, ls`This frame has been identified as the a child frame of an ad`);
         break;
       default:
         this._generalSection.setFieldVisible(ls`Ad Status`, false);
@@ -300,7 +302,7 @@ export class FrameDetailsView extends UI.ThrottledWidget.ThrottledWidget {
 function linkifyIcon(iconType, title, eventHandler) {
   const icon = UI.Icon.Icon.create(iconType, 'icon-link devtools-link');
   const span = document.createElement('span');
-  span.title = title;
+  UI.Tooltip.Tooltip.install(span, title);
   span.classList.add('devtools-link');
   span.tabIndex = 0;
   span.appendChild(icon);
@@ -376,7 +378,8 @@ export class OpenedWindowDetailsView extends UI.ThrottledWidget.ThrottledWidget 
     this._openerElementField = this._securitySection.appendField(ls`Opener Frame`);
     this._securitySection.setFieldVisible(ls`Opener Frame`, false);
     this._hasDOMAccessValue = this._securitySection.appendField(ls`Access to opener`);
-    this._hasDOMAccessValue.title = ls`Shows whether the opened window is able to access its opener and vice versa`;
+    UI.Tooltip.Tooltip.install(
+        this._hasDOMAccessValue, ls`Shows whether the opened window is able to access its opener and vice versa`);
     this.update();
   }
 

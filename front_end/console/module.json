@@ -226,13 +226,6 @@
   "modules": [
     "console-legacy.js"
   ],
-  "skip_compilation": [
-    "console-legacy.js",
-    "ConsoleDiracPrompt.js"
-  ],
-  "skip_compilation": [
-    "clojure-parinfer.js"
-  ],
   "resources": [
     "consoleContextSelector.css",
     "consolePinPane.css",

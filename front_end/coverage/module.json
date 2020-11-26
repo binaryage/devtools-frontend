@@ -58,12 +58,7 @@
     "workspace"
   ],
   "modules": [
-    "coverage.js",
-    "coverage-legacy.js",
-    "CoverageModel.js",
-    "CoverageListView.js",
-    "CoverageView.js",
-    "CoverageDecorationManager.js"
+    "coverage-legacy.js"
   ],
   "resources": [
     "coverageListView.css",
